@@ -18,23 +18,28 @@
     <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.8 0.8 0.8 1" material="grid"/>
     <!-- Base body with a free joint -->
     <body name="base" pos="0 0 0.5">
-      <!--<freejoint />-->
-      <geom type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5"/>
+      <freejoint />
+      <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
+      <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
+      <geom type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6"/>
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
-        <geom type="mesh" mesh="omni_mesh_0" />
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <geom type="mesh" mesh="omni_mesh_0" density="620.0"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" damping="0.1" armature="0.005"/>
       </body>
 
       <body name="wheel_1" pos="0 0 -0.001" euler="0 0 0">
-        <geom type="mesh" mesh="omni_mesh_1" />
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <geom type="mesh" mesh="omni_mesh_1" density="620"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_1" type="hinge" axis="0.6741579351174821 0.2133331726359635 -0.7071068066220314" pos="0 0 0.0293" damping="0.1" armature="0.005"/>
       </body>
 
       <body name="wheel_2" pos="0 0 -0.001" euler="0 0 0">
-        <geom type="mesh" mesh="omni_mesh_2" />
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <geom type="mesh" mesh="omni_mesh_2" density="620"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_2" type="hinge" axis="-0.5212219425699983 0.47783642277253024 -0.7071068092272265" pos="0 0 0.0293" damping="0.1" armature="0.005"/>
       </body>
