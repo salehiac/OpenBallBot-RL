@@ -27,10 +27,19 @@ if 1:
         viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True #freejoints are showed as boxes that mask the hinge ones, so comment the former in the xml file for debug
         viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = False # Show contact points
         viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = False # Show contact forces
-        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONVEXHULL] = False # Show collision bounding boxes
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONVEXHULL] = True # Show collision bounding boxes
         while viewer.is_running():
+
+            for i in range(data.ncon):
+                contact = data.contact[i]
+                print(f"Contact {i}:")
+                print(f"  Normal    : {contact.frame[6:9]}")  # Contact normal
+                print(f"  Tangent 1 : {contact.frame[0:3]} (Friction 'a')")
+                print(f"  Tangent 2 : {contact.frame[3:6]} (Friction 'b')")
+
+
             mujoco.mj_step(model, data)
             viewer.sync()
-            time.sleep(0.01)
+            #time.sleep(0.01)
             #pdb.set_trace()
     

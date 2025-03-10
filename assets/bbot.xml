@@ -7,6 +7,7 @@
     <mesh name="omni_mesh_0" file="omniwheel_0.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <mesh name="omni_mesh_1" file="omniwheel_1.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <mesh name="omni_mesh_2" file="omniwheel_2.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+    <mesh name="sphere_mesh" file="sphere.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance=".2"/>
     <texture name="basketball_tex" type="2d" file="basketball_texture.png"/>
@@ -16,34 +17,40 @@
 
   <worldbody>
 
+    <geom name="x_axis" type="capsule" fromto="0 0 0 0.2 0 0" size="0.005" rgba="1 0 0 1" contype="0" conaffinity="0"/>
+    <geom name="y_axis" type="capsule" fromto="0 0 0 0 0.2 0" size="0.005" rgba="0 1 0 1" contype="0" conaffinity="0"/>
+    <geom name="z_axis" type="capsule" fromto="0 0 0 0 0 0.2" size="0.005" rgba="0 0 1 1" contype="0" conaffinity="0"/>
+
+
     <light name="top" pos="0 0 1.0"/>
     <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.8 0.8 0.8 1" material="grid"/>
     <!-- Base body with a free joint -->
-    <body name="base" pos="0 0 0.36">
+    <body name="base" pos="0 0 0.32">
       <!--<freejoint />-->
       <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
       <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
-      <geom type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6"/>
+      <geom type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/> <!-- no collision because the bounding box is stupidly large!-->
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
         <!--each omniwheel is about 0.054kg on the real robot-->
-        <geom type="mesh" mesh="omni_mesh_0" density="620.0"/>
+        <geom name="wheel_mesh" type="mesh" mesh="omni_mesh_0"  density="620.0" solref="0.02 1" solimp="0.9 0.95 0.001" />
         <!--axis orientation from feedcad's python api, pos offset set manually-->
-        <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" damping="0.1" armature="0.005"/>
+        <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.1"/>
       </body>
 
     </body>
     
-    <body name="ball" pos="0 0.0 0.15">
+    <body name="ball" pos="0 0.0 0.33">
       <!--<freejoint />-->
-      <geom name="green_sphere" size=".14" rgba="1 1 1 0.1" density="100"   material="basketball_mat" friction="0.6 0.6 0.005" />
-      <joint name="basket_joint" type="hinge" axis="0 0 1" pos="0 0 0"/>
+      <!--the basketball should be around 0.6kg-->
+      <geom name="sphere" type="mesh" mesh="sphere_mesh" rgba="1 1 1 0.2" density="55" material="basketball_mat" solref="0.02 1" solimp="0.9 0.95 0.001" condim="3" friction="0.05 0.05"/>
+      <joint name="basket_joint" type="hinge" axis="1 -0.2 0" pos="0 0 -0.18"/>
     </body>
   </worldbody>
 
   <actuator>
-    <velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-50 50" kv="0.5"/>
-    <velocity name="basket_motor" joint="basket_joint" ctrlrange="-50 50"/>
+    <velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-1500 1500" kv="0.5"/>
+    <velocity name="basket_motor" joint="basket_joint" ctrlrange="-5000 5000"/>
   </actuator>
 
 </mujoco>
