@@ -3,6 +3,7 @@ import mujoco.viewer
 import numpy as np
 import sys
 import pdb
+import time
 from termcolor import colored
 
 # Load the model
@@ -23,13 +24,13 @@ print(colored(f"total_mass: {total_mass}","magenta",attrs=["bold"]))
 
 if 1:
     with mujoco.viewer.launch_passive(model, data) as viewer:
-        #viewer.cam.distance = 500.0
-        #viewer.cam.azimuth = 90
-        #viewer.cam.elevation = -45
-        #viewer.cam.lookat[:] = np.array([0.0, -0.25, 0.824])
-        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True  #freejoints are showed as boxes that mask the hinge ones, so comment the former in the xml file for debug
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = False #freejoints are showed as boxes that mask the hinge ones, so comment the former in the xml file for debug
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = False # Show contact points
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = True # Show contact forces
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONVEXHULL] = False # Show collision bounding boxes
         while viewer.is_running():
             mujoco.mj_step(model, data)
             viewer.sync()
+            time.sleep(0.01)
             #pdb.set_trace()
     
