@@ -15,7 +15,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     #viewer.cam.azimuth = 90
     #viewer.cam.elevation = -45
     #viewer.cam.lookat[:] = np.array([0.0, -0.25, 0.824])
-    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True  # Show joint axes
+    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True  #freejoints are showed as boxes that mask the hinge ones, so comment the former in the xml file for debug
     while viewer.is_running():
         mujoco.mj_step(model, data)
         viewer.sync()
