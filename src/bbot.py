@@ -24,9 +24,9 @@ print(colored(f"total_mass: {total_mass}","magenta",attrs=["bold"]))
 
 if 1:
     with mujoco.viewer.launch_passive(model, data) as viewer:
-        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = False #freejoints are showed as boxes that mask the hinge ones, so comment the former in the xml file for debug
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True #freejoints are showed as boxes that mask the hinge ones, so comment the former in the xml file for debug
         viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = False # Show contact points
-        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = True # Show contact forces
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = False # Show contact forces
         viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONVEXHULL] = False # Show collision bounding boxes
         while viewer.is_running():
             mujoco.mj_step(model, data)

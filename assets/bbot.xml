@@ -1,6 +1,6 @@
 <mujoco model="ballbot">
   <compiler meshdir="stl_files" texturedir="textures" /> <!--path is relative to the xml file-->
-  <option timestep="0.002" />
+  <option timestep="0.001" />
 
   <asset>
     <mesh name="base_mesh" file="tower.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
@@ -19,7 +19,7 @@
     <light name="top" pos="0 0 1.0"/>
     <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.8 0.8 0.8 1" material="grid"/>
     <!-- Base body with a free joint -->
-    <body name="base" pos="0 0 0.345">
+    <body name="base" pos="0 0 0.36">
       <!--<freejoint />-->
       <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
       <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
@@ -27,37 +27,23 @@
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
         <!--each omniwheel is about 0.054kg on the real robot-->
-        <geom type="mesh" mesh="omni_mesh_0" density="620.0" solimp="0.9 0.95 0.001" solref="0.02 1" friction="0.8 0.2 0.1" condim="4"/>
+        <geom type="mesh" mesh="omni_mesh_0" density="620.0"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" damping="0.1" armature="0.005"/>
-      </body>
-
-      <body name="wheel_1" pos="0 0 -0.001" euler="0 0 0">
-        <!--each omniwheel is about 0.054kg on the real robot-->
-        <geom type="mesh" mesh="omni_mesh_1" density="620" solimp="0.9 0.95 0.001" solref="0.02 1" friction="0.8 0.2 0.1" condim="4"/>
-        <!--axis orientation from feedcad's python api, pos offset set manually-->
-        <joint name="wheel_joint_1" type="hinge" axis="0.6741579351174821 0.2133331726359635 -0.7071068066220314" pos="0 0 0.0293" damping="0.1" armature="0.005"/>
-      </body>
-
-      <body name="wheel_2" pos="0 0 -0.001" euler="0 0 0">
-        <!--each omniwheel is about 0.054kg on the real robot-->
-        <geom type="mesh" mesh="omni_mesh_2" density="620" solimp="0.9 0.95 0.001" solref="0.02 1" friction="0.8 0.2 0.1" condim="4"/>
-        <!--axis orientation from feedcad's python api, pos offset set manually-->
-        <joint name="wheel_joint_2" type="hinge" axis="-0.5212219425699983 0.47783642277253024 -0.7071068092272265" pos="0 0 0.0293" damping="0.1" armature="0.005"/>
       </body>
 
     </body>
     
     <body name="ball" pos="0 0.0 0.15">
-      <freejoint />
-      <geom name="green_sphere" size=".14"  density="100" solimp="0.9 0.95 0.001" solref="0.02 1.0" material="basketball_mat"/>
+      <!--<freejoint />-->
+      <geom name="green_sphere" size=".14" rgba="1 1 1 0.1" density="100"   material="basketball_mat" friction="0.6 0.6 0.005" />
+      <joint name="basket_joint" type="hinge" axis="0 0 1" pos="0 0 0"/>
     </body>
   </worldbody>
 
   <actuator>
-    <velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-5 5" kv="0.5"/>
-    <velocity name="motor_1" joint="wheel_joint_1" ctrlrange="-5 5" kv="0.5"/>
-    <velocity name="motor_2" joint="wheel_joint_2" ctrlrange="-5 5" kv="0.5"/>
+    <velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-50 50" kv="0.5"/>
+    <velocity name="basket_motor" joint="basket_joint" ctrlrange="-50 50"/>
   </actuator>
 
 </mujoco>
