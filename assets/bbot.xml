@@ -26,7 +26,8 @@
     <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.8 0.8 0.8 1" material="grid"/>
     <!-- Base body with a free joint -->
     <body name="base" pos="0 0 0.33">
-      <!--<freejoint />-->
+    
+      <freejoint />
       <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
       <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
       <geom type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/> <!-- no collision because the bounding box is stupidly large!-->
@@ -38,28 +39,41 @@
         <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
 
+      <body name="wheel_1" pos="0 0 -0.001" euler="0 0 0">
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <geom name="wheel_mesh_1" type="mesh" mesh="omni_mesh_1"  density="620.0" solref="0.02 1" solimp="0.9 0.95 0.001" />
+        <!--axis orientation from feedcad's python api, pos offset set manually-->
+        <joint name="wheel_joint_1" type="hinge" axis="0.6741579351174821 0.2133331726359635 -0.7071068066220314" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
+      </body>
 
-     
+
+      <body name="wheel_2" pos="0 0 -0.001" euler="0 0 0">
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <geom name="wheel_mesh_2" type="mesh" mesh="omni_mesh_2"  density="620.0" solref="0.02 1" solimp="0.9 0.95 0.001" />
+        <!--axis orientation from feedcad's python api, pos offset set manually-->
+        <joint name="wheel_joint_2" type="hinge" axis="-0.5212219425699983 0.47783642277253024 -0.7071068092272265" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
+      </body>
 
     </body>
 
-
     <body name="ball" pos="0 0.0 0.33">
-      <!--<freejoint />-->
+      <freejoint />
       <!--the basketball should be around 0.6kg-->
       <geom name="sphere" type="mesh" mesh="sphere_mesh" rgba="1 1 1 0.2" density="55" material="basketball_mat" solref="0.02 1" solimp="0.9 0.95 0.001"/>
-      <!--<joint name="basket_joint" type="hinge" axis="1 -0.2 0" pos="0 0 -0.18"/>-->
-      <joint name="basket_joint" type="hinge" axis="0 0.0 1" pos="0 0 -0.18"/>
     </body>
   </worldbody>
 
   <actuator>
-    <velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-1500 1500" kv="0.5"/>
-    <velocity name="basket_motor" joint="basket_joint" ctrlrange="-5000 5000"/>
+    <!-- 600 deg/s is about 100rpm-->
+    <velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-600 600" />
+    <velocity name="motor_1" joint="wheel_joint_1" ctrlrange="-600 600" />
+    <velocity name="motor_2" joint="wheel_joint_2" ctrlrange="-600 600" />
   </actuator>
 
   <contact>
-    <pair name="non-isotropic" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="0.5 0.01"/>
+    <pair name="non-isotropic0" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="0.5 0.01"/>
+    <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="0.5 0.01"/>
+    <pair name="non-isotropic2" geom1="sphere" geom2="wheel_mesh_2" condim="3" friction="0.5 0.01"/>
   </contact>
 
 </mujoco>

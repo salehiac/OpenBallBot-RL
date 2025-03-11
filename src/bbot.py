@@ -72,44 +72,45 @@ if 1:
                          mjVIS_CONTACTFORCE] = False  # Show contact forces
         viewer.opt.flags[
             mujoco.mjtVisFlag.
-            mjVIS_CONVEXHULL] = True  # Show collision bounding boxes
+            mjVIS_CONVEXHULL] = False # Show collision bounding boxes
 
         fig_ax = None
         step_counter = 0
         plt.ion()
         while viewer.is_running():
 
-            for ii in range(data.ncon):
-                contact = data.contact[ii]
-                contact_point = contact.pos
-                tangent_1 = contact.frame[0:3]*contact.friction[0]
-                tangent_2 = contact.frame[3:6]*contact.friction[1]
-                normal = contact.frame[6:9]
+            if 0:
+                for ii in range(data.ncon):
+                    contact = data.contact[ii]
+                    contact_point = contact.pos
+                    tangent_1 = contact.frame[0:3]*contact.friction[0]
+                    tangent_2 = contact.frame[3:6]*contact.friction[1]
+                    normal = contact.frame[6:9]
 
-                #first plot axes
-                fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
-                                      directions=np.eye(3),
-                                      colors=["r", "g", "b"],
-                                      fig_ax=fig_ax,
-                                      scale_factor=10,
-                                      clear=True,
-                                      dashed=True)
+                    #first plot axes
+                    fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
+                                          directions=np.eye(3),
+                                          colors=["r", "g", "b"],
+                                          fig_ax=fig_ax,
+                                          scale_factor=10,
+                                          clear=True,
+                                          dashed=True)
 
-                #now plot the tangential contact forces
-                origins = np.array(contact_point).reshape(
-                    1, -1)  #all three vectors have the same origin
-                directions = np.concatenate(
-                    [tangent_1.reshape(1, -1),
-                     tangent_2.reshape(1, -1)], 0)
-                fig_ax = plot_vectors(origins=origins,
-                                      directions=directions,
-                                      colors=["k", "m"],
-                                      fig_ax=fig_ax,
-                                      scale_factor=10,
-                                      clear=False)
-                np.set_printoptions(precision=3,suppress=True)
-                print(contact.friction)
-                #print(step_counter)
+                    #now plot the tangential contact forces
+                    origins = np.array(contact_point).reshape(
+                        1, -1)  #all three vectors have the same origin
+                    directions = np.concatenate(
+                        [tangent_1.reshape(1, -1),
+                         tangent_2.reshape(1, -1)], 0)
+                    fig_ax = plot_vectors(origins=origins,
+                                          directions=directions,
+                                          colors=["k", "m"],
+                                          fig_ax=fig_ax,
+                                          scale_factor=10,
+                                          clear=False)
+                    np.set_printoptions(precision=3,suppress=True)
+                    print(contact.friction)
+                    #print(step_counter)
 
             mujoco.mj_step(model, data)
             step_counter += 1
