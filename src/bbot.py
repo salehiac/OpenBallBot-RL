@@ -1,50 +1,19 @@
-import mujoco
-import mujoco.viewer
 import numpy as np
 import sys
 import pdb
 import time
-from termcolor import colored
 import matplotlib.pyplot as plt
-from typing import List, Optional
+import quaternion
+
+import mujoco
+import mujoco.viewer
+import torch
+from termcolor import colored
 
 
-def plot_vectors(origins: np.ndarray,
-                 directions: np.ndarray,
-                 colors: List[str],
-                 fig_ax: Optional[List] = None,
-                 axis_limits: List[float] = None,
-                 scale_factor: float = 1.0,
-                 clear: bool = True,
-                 dashed: bool = False):
-    """
-    origins  should be of shape num_pts*3, optionally, it can also be 1*3. In that case, all vectors will have the same origin
-    directions  should be of shape num_pts*3
-    """
-    if fig_ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-    else:
-        fig = fig_ax[0]
-        ax = fig_ax[1]
+import policies
+from utils import plot_vectors
 
-    if clear:
-        ax.clear()
-    ax.quiver(*(origins.T * scale_factor),
-              *(directions.T * scale_factor),
-              color=colors,
-              linestyle="solid" if not dashed else "dashed")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-
-    axis_limits = axis_limits if axis_limits is not None else [10.0] * 3
-    ax.set_xlim([-axis_limits[0], axis_limits[0]])
-    ax.set_ylim([-axis_limits[1], axis_limits[1]])
-    ax.set_zlim([-axis_limits[2], axis_limits[2]])
-
-    plt.pause(0.01)
-    return [fig, ax]
 
 
 # Load the model
@@ -60,6 +29,8 @@ for b_i in range(model.nbody):
     print(f"{body_name}: {cur_mass}")
     total_mass += cur_mass
 print(colored(f"total_mass: {total_mass}", "magenta", attrs=["bold"]))
+
+pid=policies.PID()
 
 if 1:
     with mujoco.viewer.launch_passive(model, data) as viewer:
@@ -111,6 +82,27 @@ if 1:
                     np.set_printoptions(precision=3,suppress=True)
                     print(contact.friction)
                     #print(step_counter)
+
+            imu_accel = data.sensordata[:3]  # First 3 values: Accelerometer
+            imu_gyro = data.sensordata[3:6]  # Next 3 values: Gyroscope
+
+            print("Accelerometer:", imu_accel)
+            print("Gyroscope:", imu_gyro)
+
+            body_id = model.body("base").id  
+            position = data.xpos[body_id]  
+            orientation = quaternion.quaternion(*data.xquat[body_id])
+            print("position:", position)
+            #print("orientation:", orientation)
+
+            with torch.no_grad():
+
+                R_mat=quaternion.as_rotation_matrix(orientation)
+                ctrl,err_norm=pid.act(torch.tensor(R_mat).float())
+                print(colored(err_norm,"red",attrs=["bold"]))
+                ctrl=ctrl.detach().cpu().numpy().reshape(3)
+            print("ctrl==",ctrl)
+            data.ctrl[:] = ctrl
 
             mujoco.mj_step(model, data)
             step_counter += 1

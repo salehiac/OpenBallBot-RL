@@ -30,7 +30,11 @@
       <freejoint />
       <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
       <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
-      <geom type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/> <!-- no collision because the bounding box is stupidly large!-->
+      <!-- if you want to use the convex hull for collision, uncomment the following line and comment the two ones that follow it -->
+      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/> -->
+      <!-- to not use the convex hull but instead use the mesh for visual+inertial properties and rely on a cylinder for collisions, comment the line above and uncomment the two below  -->
+      <geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/> <!-- no collision because the convex hull is too large-->
+      <geom name="tower_collision" type="cylinder"  rgba="0 0 0 0.4" size="0.11 0.14" pos="0 0 0.1" density="83.6" contype="0" conaffinity="0"/> 
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
         <!--each omniwheel is about 0.054kg on the real robot-->
@@ -54,6 +58,8 @@
         <joint name="wheel_joint_2" type="hinge" axis="-0.5212219425699983 0.47783642277253024 -0.7071068092272265" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
 
+      <site name="imu_site" pos="0 0 0" size="0.01"/>
+
     </body>
 
     <body name="ball" pos="0 0.0 0.33">
@@ -75,6 +81,11 @@
     <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="0.5 0.01"/>
     <pair name="non-isotropic2" geom1="sphere" geom2="wheel_mesh_2" condim="3" friction="0.5 0.01"/>
   </contact>
+
+  <sensor>
+    <accelerometer name="imu_accel" site="imu_site"/>
+    <gyro name="imu_gyro" site="imu_site"/>
+  </sensor>
 
 </mujoco>
 
