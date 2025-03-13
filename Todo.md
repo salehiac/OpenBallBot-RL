@@ -1,6 +1,6 @@
 # frictions
 
-I have set anisotropic friction using a directly defined contact (from the documentation, that seems to be the only way).
+I have set anisotropic friction using a directly defined contact (from the documentation, that seems to be the only way, this is also what is suggested here https://github.com/google-deepmind/mujoco/issues/67 ).
 
 However, I'm not sure which of the two friction="a b" coefficients will go to `tangent_1 and tangent_2`. Plotting with matplotlib seems to indicate that the first goes to `tangent_1` and so on,
 but plotting contact splist in mujoco's GUI seems to contradict that... I'm not sure how to interpret this. I hope tangent vectors don't flip midway!
@@ -9,6 +9,8 @@ solutions: 1) implement PID, if it works correctly, then frictions might be set 
            2) do ask the question on mujoco's git
 
 #PID
+
+UPDATE: what is below is correct, except that I'm switching to torque control for easier modeling via lagrangian mechanics
 
 So, dumb pid control à la 
 
@@ -29,3 +31,7 @@ So... I think we need a model of the robot to do this:
    `velocity_control`=F(u) #where u are the horizontal increments 
 
 So yeah, I guess it's time to finally read those papers!
+
+#MISC
+
+In case you haven't touched this code for a while: there are sleep functions in the bbot.py file that are just here for debug!

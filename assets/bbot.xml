@@ -71,11 +71,15 @@
 
   <actuator>
     <!-- 600 deg/s is about 100rpm-->
-    <velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-600 600" />
-    <velocity name="motor_1" joint="wheel_joint_1" ctrlrange="-600 600" />
-    <velocity name="motor_2" joint="wheel_joint_2" ctrlrange="-600 600" />
-  </actuator>
+    <!--<velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-600 600" />-->
+    <!--<velocity name="motor_1" joint="wheel_joint_1" ctrlrange="-600 600" />-->
+    <!--<velocity name="motor_2" joint="wheel_joint_2" ctrlrange="-600 600" />-->
 
+    <!--torque control - easier to model. Note that gear just seems to scale the torque.-->
+    <motor name="motor_0" joint="wheel_joint_0" gear="1" ctrlrange="-100 100" />
+    <motor name="motor_1" joint="wheel_joint_1" gear="1" ctrlrange="-100 100" />  
+    <motor name="motor_2" joint="wheel_joint_2" gear="1" ctrlrange="-100 100" />
+  </actuator>
   <contact>
     <pair name="non-isotropic0" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="0.5 0.01"/>
     <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="0.5 0.01"/>

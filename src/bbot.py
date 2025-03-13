@@ -102,7 +102,7 @@ if 1:
                 print(colored(err_norm,"red",attrs=["bold"]))
                 ctrl=ctrl.detach().cpu().numpy().reshape(3)
             print("ctrl==",ctrl)
-            data.ctrl[:] = ctrl
+            #data.ctrl[:] = ctrl
 
             mujoco.mj_step(model, data)
             step_counter += 1
