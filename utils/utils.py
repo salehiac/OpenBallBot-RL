@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 from typing import List, Optional
 import numpy as np
@@ -32,7 +31,8 @@ def plot_vectors(origins: np.ndarray,
                  axis_limits: List[float] = None,
                  scale_factor: float = 1.0,
                  clear: bool = True,
-                 dashed: bool = False):
+                 dashed: bool = False,
+                 no_pause: bool = False):
     """
     origins  should be of shape num_pts*3, optionally, it can also be 1*3. In that case, all vectors will have the same origin
     directions  should be of shape num_pts*3
@@ -59,8 +59,7 @@ def plot_vectors(origins: np.ndarray,
     ax.set_ylim([-axis_limits[1], axis_limits[1]])
     ax.set_zlim([-axis_limits[2], axis_limits[2]])
 
-    plt.pause(0.01)
+    if not no_pause:
+        plt.pause(0.01)
     return [fig, ax]
 
-
-    

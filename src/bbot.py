@@ -11,8 +11,10 @@ import torch
 from termcolor import colored
 
 
+sys.path.append("..")
 import policies
 from utils import plot_vectors
+from assets import OmniWheelRef
 
 
 
@@ -30,7 +32,7 @@ for b_i in range(model.nbody):
     total_mass += cur_mass
 print(colored(f"total_mass: {total_mass}", "magenta", attrs=["bold"]))
 
-pid=policies.PID()
+omni=OmniWheelRef()
 
 if 1:
     with mujoco.viewer.launch_passive(model, data) as viewer:
@@ -83,26 +85,56 @@ if 1:
                     print(contact.friction)
                     #print(step_counter)
 
+            #print("data time=",data.time)
+            if data.time==0.0:
+                step_counter=0
+
+                #k_vals=[1000, 0, 32]
+                #k_vals=[100, 92.32323232323233, 68.48484848484848]
+                k_vals=[100, 91.41414141414141, 68.78787878787878]
+                #k_vals=[100, 89.32323232323232, 68.0909090909091]
+
+
+
+
+                #pid=policies.PID(dt=model.opt.timestep,k_d=-100,k_i=-100,k_p=-100)
+                pid=policies.PID(dt=model.opt.timestep,
+                        k_p=k_vals[0],
+                        k_i=k_vals[1],
+                        k_d=k_vals[2])
+            #print("step_counter==",step_counter)
+
+
             imu_accel = data.sensordata[:3]  # First 3 values: Accelerometer
             imu_gyro = data.sensordata[3:6]  # Next 3 values: Gyroscope
 
-            print("Accelerometer:", imu_accel)
-            print("Gyroscope:", imu_gyro)
+            #print("Accelerometer:", imu_accel)
+            #print("Gyroscope:", imu_gyro)
 
             body_id = model.body("base").id  
             position = data.xpos[body_id]  
             orientation = quaternion.quaternion(*data.xquat[body_id])
-            print("position:", position)
+            #print("position:", position)
             #print("orientation:", orientation)
 
             with torch.no_grad():
 
                 R_mat=quaternion.as_rotation_matrix(orientation)
-                ctrl,err_norm=pid.act(torch.tensor(R_mat).float())
-                print(colored(err_norm,"red",attrs=["bold"]))
-                ctrl=ctrl.detach().cpu().numpy().reshape(3)
-            print("ctrl==",ctrl)
-            #data.ctrl[:] = ctrl
+                ctrl_b,angle_deg=pid.act(torch.tensor(R_mat).float())
+                #print(colored(angle_deg,"red",attrs=["bold"]))
+                if angle_deg>15:
+                    plt.plot(pid.err_hist,label="err")
+                    plt.plot(pid.integral_hist,label="int")
+                    plt.plot(pid.derivative_hist,label="der")
+                    plt.legend(fontsize=15)
+                    plt.title(f"fail after {step_counter}")
+                    plt.show()
+                    pdb.set_trace()
+
+
+            ctrl_c=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
+            #print("ctrl==",ctrl_c)
+            data.ctrl[:] = ctrl_c
 
             mujoco.mj_step(model, data)
             step_counter += 1

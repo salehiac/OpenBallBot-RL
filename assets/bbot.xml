@@ -7,7 +7,7 @@
     <mesh name="omni_mesh_0" file="omniwheel_0.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <mesh name="omni_mesh_1" file="omniwheel_1.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <mesh name="omni_mesh_2" file="omniwheel_2.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
-    <mesh name="sphere_mesh" file="sphere.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+    <mesh name="sphere_mesh" file="sphere_2.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance=".2"/>
     <texture name="basketball_tex" type="2d" file="basketball_texture.png"/>
@@ -25,16 +25,17 @@
     <light name="top" pos="0 0 1.0"/>
     <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.8 0.8 0.8 1" material="grid"/>
     <!-- Base body with a free joint -->
-    <body name="base" pos="0 0 0.33">
+    <body name="base" pos="0 0 0.38">
     
       <freejoint />
       <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
       <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
       <!-- if you want to use the convex hull for collision, uncomment the following line and comment the two ones that follow it -->
-      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/> -->
+      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6"/> -->
       <!-- to not use the convex hull but instead use the mesh for visual+inertial properties and rely on a cylinder for collisions, comment the line above and uncomment the two below  -->
-      <geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/> <!-- no collision because the convex hull is too large-->
-      <geom name="tower_collision" type="cylinder"  rgba="0 0 0 0.4" size="0.11 0.14" pos="0 0 0.1" density="83.6" contype="0" conaffinity="0"/> 
+      <geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6" contype="0" conaffinity="0"/>  no collision because the convex hull is too large
+      <geom name="tower_collision" type="cylinder"  rgba="0 0 0 0.4" size="0.11 0.14" pos="0 0 0.1" density="83.6"/> 
+      <geom name="ballast" type="box" size="0.1 0.1  0.1" rgba="0.5 0.5 0.0 0.5" density="500" pos="0 0 0.01" contype="0" conaffinity="0" group="3"/>   to lower center of mass
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
         <!--each omniwheel is about 0.054kg on the real robot-->
@@ -62,7 +63,7 @@
 
     </body>
 
-    <body name="ball" pos="0 0.0 0.33">
+    <body name="ball" pos="0 0.0 0.44">
       <freejoint />
       <!--the basketball should be around 0.6kg-->
       <geom name="sphere" type="mesh" mesh="sphere_mesh" rgba="1 1 1 0.2" density="55" material="basketball_mat" solref="0.02 1" solimp="0.9 0.95 0.001"/>
@@ -80,10 +81,11 @@
     <motor name="motor_1" joint="wheel_joint_1" gear="1" ctrlrange="-100 100" />  
     <motor name="motor_2" joint="wheel_joint_2" gear="1" ctrlrange="-100 100" />
   </actuator>
+
   <contact>
-    <pair name="non-isotropic0" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="0.5 0.01"/>
-    <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="0.5 0.01"/>
-    <pair name="non-isotropic2" geom1="sphere" geom2="wheel_mesh_2" condim="3" friction="0.5 0.01"/>
+    <pair name="non-isotropic0" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="1.0 0.01"/>
+    <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="1.0 0.01"/>
+    <pair name="non-isotropic2" geom1="sphere" geom2="wheel_mesh_2" condim="3" friction="1.0 0.01"/>
   </contact>
 
   <sensor>
