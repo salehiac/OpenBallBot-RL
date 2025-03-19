@@ -89,13 +89,7 @@ if 1:
             if data.time==0.0:
                 step_counter=0
 
-                #k_vals=[1000, 0, 32]
-                #k_vals=[100, 92.32323232323233, 68.48484848484848]
-                k_vals=[100, 91.41414141414141, 68.78787878787878]
-                #k_vals=[100, 89.32323232323232, 68.0909090909091]
-
-
-
+                k_vals=[-150, 0, 0]
 
                 #pid=policies.PID(dt=model.opt.timestep,k_d=-100,k_i=-100,k_p=-100)
                 pid=policies.PID(dt=model.opt.timestep,
@@ -123,13 +117,14 @@ if 1:
                 ctrl_b,angle_deg=pid.act(torch.tensor(R_mat).float())
                 #print(colored(angle_deg,"red",attrs=["bold"]))
                 if angle_deg>15:
-                    plt.plot(pid.err_hist,label="err")
-                    plt.plot(pid.integral_hist,label="int")
-                    plt.plot(pid.derivative_hist,label="der")
-                    plt.legend(fontsize=15)
-                    plt.title(f"fail after {step_counter}")
-                    plt.show()
-                    pdb.set_trace()
+                    print(f"fail after {step_counter}")
+                    #plt.plot(pid.err_hist,label="err")
+                    #plt.plot(pid.integral_hist,label="int")
+                    #plt.plot(pid.derivative_hist,label="der")
+                    #plt.legend(fontsize=15)
+                    #plt.title(f"fail after {step_counter}")
+                    #plt.show()
+                    #pdb.set_trace()
 
 
             ctrl_c=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)

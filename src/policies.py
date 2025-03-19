@@ -32,8 +32,31 @@ class PID(ABC):
         self.derivative_hist=[]
 
 
-
     def act(self, R_mat:torch.tensor):
+
+        gravity=torch.tensor([0,0,-1.0]).float().reshape(3,1)
+        gravity_local=R_mat.T.mm(gravity).reshape(3)
+        up_axis_local=torch.tensor([0,0,1]).float()
+
+        #all in local coordinates
+        error_vec=(-gravity_local)-up_axis_local
+        error_vec_2d=error_vec[:-1]
+
+        self.integral+=error_vec_2d*self.dt
+        derivative=(error_vec_2d-self.prev_err)/self.dt
+        u=self.k_p*error_vec_2d + self.k_i * self.integral + self.k_d * derivative
+
+
+        self.prev_err=error_vec_2d
+
+        angle_in_degrees=torch.acos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
+
+
+        return u, angle_in_degrees #in local coordinates #in local coordinates
+
+
+
+    def act_garbage(self, R_mat:torch.tensor):
         """
         R_mat rotation matrix
         """
