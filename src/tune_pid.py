@@ -38,7 +38,7 @@ def run_simulation(model,pid):
 
         with torch.no_grad():
             R_mat=quaternion.as_rotation_matrix(orientation)
-            ctrl_b,angle_err=pid.act(torch.tensor(R_mat).float())
+            ctrl_b,angle_err, _, _=pid.act(torch.tensor(R_mat).float())
             if angle_err>15.0:
                 #err_hist=np.concatenate(pid.err_hist,1)#2*N
                 #int_hist=np.concatenate(pid.integral_hist,1)
@@ -74,9 +74,9 @@ if __name__=="__main__":
     #ki=np.linspace(60,100,100)
     #kd=np.linspace(60,100,100)
     
-    kp=[-500]
-    ki=np.linspace(-50,0,500)
-    kd=np.linspace(-50,0,500)
+    kp=[220]
+    ki=np.linspace(100,200,70)
+    kd=np.linspace(0,50,70)
 
     successes=[]
 
@@ -101,6 +101,6 @@ if __name__=="__main__":
                 if ep_len>best_len:
                     best_len=ep_len
                     best_config=[k_p,k_i,k_d]
-
+                    print("ep_len==",ep_len,best_config )
 
 
