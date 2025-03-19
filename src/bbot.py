@@ -89,7 +89,7 @@ if 1:
             if data.time==0.0:
                 step_counter=0
 
-                k_vals=[-150, 0, 0]
+                k_vals=[1000, 0, 0]
 
                 #pid=policies.PID(dt=model.opt.timestep,k_d=-100,k_i=-100,k_p=-100)
                 pid=policies.PID(dt=model.opt.timestep,
@@ -114,22 +114,45 @@ if 1:
             with torch.no_grad():
 
                 R_mat=quaternion.as_rotation_matrix(orientation)
-                ctrl_b,angle_deg=pid.act(torch.tensor(R_mat).float())
+                ctrl_b,angle_deg, ctrl_global, up_axis_global=pid.act(torch.tensor(R_mat).float())
                 #print(colored(angle_deg,"red",attrs=["bold"]))
-                if angle_deg>15:
+                if angle_deg>10:
                     print(f"fail after {step_counter}")
-                    #plt.plot(pid.err_hist,label="err")
+                    plt.plot(pid.err_hist,label="err")
                     #plt.plot(pid.integral_hist,label="int")
                     #plt.plot(pid.derivative_hist,label="der")
                     #plt.legend(fontsize=15)
                     #plt.title(f"fail after {step_counter}")
-                    #plt.show()
+                    plt.show()
                     #pdb.set_trace()
-
-
             ctrl_c=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
+
+            #fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
+            #                              directions=np.eye(3),
+            #                              colors=["r", "g", "b"],
+            #                              fig_ax=fig_ax,
+            #                              scale_factor=10,
+            #                              clear=True,
+            #                              dashed=True)
+            #fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
+            #        directions=ctrl_global.numpy().reshape(1,3),
+            #            colors=["k"],
+            #            fig_ax=fig_ax,
+            #            scale_factor=10,
+            #            clear=False)
+
+            #fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
+            #        directions=up_axis_global.numpy().reshape(1,3),
+            #            colors=["m"],
+            #            fig_ax=fig_ax,
+            #            scale_factor=10,
+            #            clear=False)
+
+
+
+
             #print("ctrl==",ctrl_c)
-            data.ctrl[:] = ctrl_c
+            #data.ctrl[:] = ctrl_c
 
             mujoco.mj_step(model, data)
             step_counter += 1
