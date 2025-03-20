@@ -33,6 +33,7 @@ for b_i in range(model.nbody):
 print(colored(f"total_mass: {total_mass}", "magenta", attrs=["bold"]))
 
 omni=OmniWheelRef()
+ctrl_hist=[]
 
 if 1:
     with mujoco.viewer.launch_passive(model, data) as viewer:
@@ -89,7 +90,7 @@ if 1:
             if data.time==0.0:
                 step_counter=0
 
-                k_vals=[600,0,0] #-40,40, dot product mapping
+                k_vals=[800,0,0] #-40,40, dot product mapping
 
                 #pid=policies.PID(dt=model.opt.timestep,k_d=-100,k_i=-100,k_p=-100)
                 pid=policies.PID(dt=model.opt.timestep,
@@ -110,13 +111,26 @@ if 1:
             orientation = quaternion.quaternion(*data.xquat[body_id])
             #print("position:", position)
             #print("orientation:", orientation)
-
+  
             with torch.no_grad():
 
                 R_mat=quaternion.as_rotation_matrix(orientation)
                 ctrl_b,angle_deg, ctrl_global, up_axis_global=pid.act(torch.tensor(R_mat).float())
                 #print(colored(angle_deg,"red",attrs=["bold"]))
-                if angle_deg>15:
+
+                ctrl_c=torch.zeros(3)
+                ctrl_c[0]=ctrl_b[0]*np.cos(0)  + ctrl_b[1]*np.sin(0)  
+                ctrl_c[1]=ctrl_b[0]*np.cos(120)+ ctrl_b[1]*np.sin(120) 
+                ctrl_c[2]=ctrl_b[0]*np.cos(240)+ ctrl_b[1]*np.sin(240) 
+
+                ctrl_c_mine=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
+                #ctrl_c=ctrl_c_mine
+
+                #print("hello==",ctrl_c_mine, ctrl_c)
+                ctrl_hist.append(ctrl_c.reshape(1,3))
+
+
+                if angle_deg>25:
                     pass
                     #print(f"fail after {step_counter}")
                     #plt.plot(pid.err_hist,label="err")
@@ -125,24 +139,14 @@ if 1:
                     plt.plot(mm[:,1],label="err1")
                     #plt.plot(pid.integral_hist,label="int")
                     #plt.plot(pid.derivative_hist,label="der")
-                    #plt.legend(fontsize=15)
-                    #plt.title(f"fail after {step_counter}")
-                    plt.show()
+                    plt.title(f"fail after {step_counter}")
+                    nn=np.concatenate(ctrl_hist,0)
+                    for c_i in range(3):
+                        plt.plot(nn[:,c_i],label=f"ctrl_{c_i}")
+                    plt.legend(fontsize=15);plt.show()
                     pdb.set_trace()
             
-            ctrl_c=torch.zeros(3)
-            ctrl_c[0]=ctrl_b[0]*np.cos(0)  + ctrl_b[1]*np.sin(0)  
-            ctrl_c[1]=ctrl_b[0]*np.cos(120)+ ctrl_b[1]*np.sin(120) 
-            ctrl_c[2]=ctrl_b[0]*np.cos(240)+ ctrl_b[1]*np.sin(240) 
-
-            ctrl_c_mine=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
-            #ctrl_c=ctrl_c_mine
-
-            print("hello==",ctrl_c_mine, ctrl_c)
-
-
-            #ctrl_c=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
-
+           
             #fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
             #                              directions=np.eye(3),
             #                              colors=["r", "g", "b"],
