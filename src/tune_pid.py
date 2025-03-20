@@ -74,9 +74,10 @@ if __name__=="__main__":
     #ki=np.linspace(60,100,100)
     #kd=np.linspace(60,100,100)
     
-    kp=[220]
-    ki=np.linspace(100,200,70)
-    kd=np.linspace(0,50,70)
+    #kp=np.linspace(360,370,1000)
+    kp=[170]
+    ki=np.linspace(0,150,100)
+    kd=np.linspace(0,150,100)
 
     successes=[]
 

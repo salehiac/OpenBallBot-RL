@@ -39,8 +39,11 @@ class PID(ABC):
         up_axis_local=torch.tensor([0,0,1]).float()
 
         #all in local coordinates
-        error_vec=up_axis_local-(-gravity_local) #for the body to move in a direction, the ball should go in the opposite one
-        error_vec_2d=error_vec[:-1]
+        #error_vec=up_axis_local-(-gravity_local) #for the body to move in a direction, the ball should go in the opposite one
+        #error_vec_2d=error_vec[:-1]
+        error_vec_2d=torch.zeros(2)
+        error_vec_2d[0]=-torch.arcsin(-R_mat[2,0])
+        error_vec_2d[1]=-torch.atan2(R_mat[2,1],R_mat[2,2])
 
         self.integral+=error_vec_2d*self.dt
         derivative=(error_vec_2d-self.prev_err)/self.dt
@@ -51,7 +54,9 @@ class PID(ABC):
 
         angle_in_degrees=torch.acos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
 
-        self.err_hist.append(angle_in_degrees)
+
+        #self.err_hist.append(angle_in_degrees)
+        self.err_hist.append(error_vec_2d.reshape(1,2).numpy())
 
         #debug stuff
         u_full=torch.zeros(3,1)

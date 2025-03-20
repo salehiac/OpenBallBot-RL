@@ -89,7 +89,7 @@ if 1:
             if data.time==0.0:
                 step_counter=0
 
-                k_vals=[190,50,0]
+                k_vals=[600,0,0] #-40,40, dot product mapping
 
                 #pid=policies.PID(dt=model.opt.timestep,k_d=-100,k_i=-100,k_p=-100)
                 pid=policies.PID(dt=model.opt.timestep,
@@ -120,43 +120,56 @@ if 1:
                     pass
                     #print(f"fail after {step_counter}")
                     #plt.plot(pid.err_hist,label="err")
+                    mm=np.concatenate(pid.err_hist,0)
+                    plt.plot(mm[:,0],label="err0")
+                    plt.plot(mm[:,1],label="err1")
                     #plt.plot(pid.integral_hist,label="int")
                     #plt.plot(pid.derivative_hist,label="der")
                     #plt.legend(fontsize=15)
                     #plt.title(f"fail after {step_counter}")
-                    #plt.show()
-                    #pdb.set_trace()
-            ctrl_c=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
+                    plt.show()
+                    pdb.set_trace()
+            
+            ctrl_c=torch.zeros(3)
+            ctrl_c[0]=ctrl_b[0]*np.cos(0)  + ctrl_b[1]*np.sin(0)  
+            ctrl_c[1]=ctrl_b[0]*np.cos(120)+ ctrl_b[1]*np.sin(120) 
+            ctrl_c[2]=ctrl_b[0]*np.cos(240)+ ctrl_b[1]*np.sin(240) 
 
-            fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
-                                          directions=np.eye(3),
-                                          colors=["r", "g", "b"],
-                                          fig_ax=fig_ax,
-                                          scale_factor=10,
-                                          clear=True,
-                                          dashed=True)
-            fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
-                    directions=ctrl_global.numpy().reshape(1,3),
-                        colors=["k"],
-                        fig_ax=fig_ax,
-                        scale_factor=10,
-                        clear=False)
+            ctrl_c_mine=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
+            #ctrl_c=ctrl_c_mine
 
-            fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
-                    directions=up_axis_global.numpy().reshape(1,3),
-                        colors=["m"],
-                        fig_ax=fig_ax,
-                        scale_factor=10,
-                        clear=False)
+            print("hello==",ctrl_c_mine, ctrl_c)
+
+
+            #ctrl_c=omni.body_plane_to_control_space(ctrl_b.cpu().detach().numpy().reshape(2,1)).reshape(3)
+
+            #fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
+            #                              directions=np.eye(3),
+            #                              colors=["r", "g", "b"],
+            #                              fig_ax=fig_ax,
+            #                              scale_factor=10,
+            #                              clear=True,
+            #                              dashed=True)
+            #fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
+            #        directions=ctrl_global.numpy().reshape(1,3),
+            #            colors=["k"],
+            #            fig_ax=fig_ax,
+            #            scale_factor=10,
+            #            clear=False)
+
+            #fig_ax = plot_vectors(origins=np.array([[0, 0, 0]]),
+            #        directions=up_axis_global.numpy().reshape(1,3),
+            #            colors=["m"],
+            #            fig_ax=fig_ax,
+            #            scale_factor=10,
+            #            clear=False)
 
 
 
             #print("ctrl==",ctrl_c)
             data.ctrl[:] = ctrl_c
-            print("ctrl_vec_norm==",np.linalg.norm(ctrl_c))
+            #print("ctrl_vec_norm==",np.linalg.norm(ctrl_c))
 
             mujoco.mj_step(model, data)
             step_counter += 1
             viewer.sync()
-            time.sleep(0.016)
-            #pdb.set_trace()
