@@ -29,7 +29,7 @@
     <light name="top" pos="0 0 1.0"/>
     <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.8 0.8 0.8 1" material="grid" friction="3.0"/>
     <!-- Base body with a free joint -->
-    <body name="base" pos="0 0 0.23" euler="0 0 0">
+    <body name="base" pos="0 0 0.22" euler="0 0 0">
     
       <freejoint />
       <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
@@ -44,7 +44,7 @@
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
         <!--each omniwheel is about 0.054kg on the real robot-->
         <!--<geom name="wheel_mesh_0" type="mesh" mesh="omni_mesh_0"  density="620.0"  />-->
-         <geom name="wheel_mesh_0" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" material="grid"/>
+         <geom name="wheel_mesh_0" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="1 0 0 1" material="grid"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
@@ -52,7 +52,7 @@
       <body name="wheel_1" pos="0 0 -0.001" euler="0 0 120">
         <!--each omniwheel is about 0.054kg on the real robot-->
         <!--<geom name="wheel_mesh_1" type="mesh" mesh="omni_mesh_1"  density="620.0"  />-->
-        <geom name="wheel_mesh_1" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" material="grid"/>
+        <geom name="wheel_mesh_1" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 1 0 1" material="grid"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_1" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
@@ -61,7 +61,7 @@
       <body name="wheel_2" pos="0 0 -0.001" euler="0 0 240">
         <!--each omniwheel is about 0.054kg on the real robot-->
         <!--<geom name="wheel_mesh_2" type="mesh" mesh="omni_mesh_2"  density="620.0"  />-->
-        <geom name="wheel_mesh_2" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" material="grid"/>
+        <geom name="wheel_mesh_2" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 0 1 1" material="grid"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_2" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
@@ -85,15 +85,16 @@
     <!--<velocity name="motor_2" joint="wheel_joint_2" ctrlrange="-600 600" />-->
 
     <!--torque control - easier to model. Note that gear just seems to scale the torque.-->
-    <motor name="motor_0" joint="wheel_joint_0" gear="1" ctrlrange="-40 40" />
-    <motor name="motor_1" joint="wheel_joint_1" gear="1" ctrlrange="-40 40" />  
-    <motor name="motor_2" joint="wheel_joint_2" gear="1" ctrlrange="-40 40" />
+    <motor name="motor_0" joint="wheel_joint_0" gear="1" ctrlrange="-10 10" />
+    <motor name="motor_1" joint="wheel_joint_1" gear="1" ctrlrange="-10 10" />  
+    <motor name="motor_2" joint="wheel_joint_2" gear="1" ctrlrange="-10 10" />
   </actuator>
 
   <contact>
-    <pair name="non-isotropic0" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="1.0 0.01"/>
-    <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="1.0 0.01"/>
-    <pair name="non-isotropic2" geom1="sphere" geom2="wheel_mesh_2" condim="3" friction="1.0 0.01"/>
+    <!--definitely the correct friction order-->
+    <pair name="non-isotropic0" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="0.001 1.0"/>
+    <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="0.001 1.0"/>
+    <pair name="non-isotropic2" geom1="sphere" geom2="wheel_mesh_2" condim="3" friction="0.001 1.0"/>
   </contact>
 
   <sensor>

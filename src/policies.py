@@ -42,11 +42,22 @@ class PID(ABC):
         #error_vec=up_axis_local-(-gravity_local) #for the body to move in a direction, the ball should go in the opposite one
         #error_vec_2d=error_vec[:-1]
         error_vec_2d=torch.zeros(2)
-        error_vec_2d[0]=-torch.arcsin(-R_mat[2,0])
-        error_vec_2d[1]=-torch.atan2(R_mat[2,1],R_mat[2,2])
+        
+        #pitch=torch.arcsin(-R_mat[2,0])
+        #roll=torch.atan2(R_mat[2,1],R_mat[2,2])
+
+        roll=torch.atan2(R_mat[2,1],R_mat[2,2]);
+        pitch=torch.atan2(-R_mat[2,0],torch.sqrt(R_mat[2,1]**2+R_mat[2,2]**2));
+
+        setpoint_r=setpoint_p=0
+        error_vec_2d[0]=setpoint_p-pitch
+        error_vec_2d[1]=setpoint_r-roll
+
 
         self.integral+=error_vec_2d*self.dt
         derivative=(error_vec_2d-self.prev_err)/self.dt
+       
+        #Now that we're computing pitch and roll error, this error is not in global coordinates but in roll/pitch space!
         u=self.k_p*error_vec_2d + self.k_i * self.integral + self.k_d * derivative
 
 
@@ -58,15 +69,11 @@ class PID(ABC):
         #self.err_hist.append(angle_in_degrees)
         self.err_hist.append(error_vec_2d.reshape(1,2).numpy())
 
-        #debug stuff
-        u_full=torch.zeros(3,1)
-        u_full[:2,0]=u
-        u_full_global=R_mat.mm(u_full)
-
         up_axis_global=R_mat.mm(up_axis_local.reshape(3,1))
 
+        print(f"roll={roll}, pitch=={pitch}, up_axis_global={R_mat.mm(up_axis_local.reshape(3,1)).reshape(3)}, command (pitch/roll coords)=={u}")
 
-        return u, angle_in_degrees , u_full_global, up_axis_global#in local coordinates #in local coordinates
+        return u, angle_in_degrees , up_axis_global#in local coordinates #in local coordinates
 
 
 
