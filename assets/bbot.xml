@@ -10,12 +10,15 @@
     <mesh name="omni_mesh_0" file="omniwheel_0.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <mesh name="omni_mesh_1" file="omniwheel_1.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <mesh name="omni_mesh_2" file="omniwheel_2.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+    <mesh name="cone_mesh" file="cone.stl" scale="0.01 0.01 0.01"/> 
     <!-- sphere_small < sphere < sphere_2 -->
     <mesh name="sphere_mesh" file="sphere_small.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance=".2"/>
     <texture name="basketball_tex" type="2d" file="basketball_texture.png"/>
     <material name="basketball_mat" texture="basketball_tex" shininess="0.2"/>
+    <texture name="metal_tex" type="2d" file="texture_metal.png" random="0.5"/>
+    <material name="metal_mat" texture="metal_tex" shininess="0.2" texuniform="false" texrepeat="2 2" />
   </asset>
 
 
@@ -37,9 +40,19 @@
       <!-- if you want to use the convex hull for collision, uncomment the following line and comment the two ones that follow it -->
       <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6"/> -->
       <!-- to not use the convex hull but instead use the mesh for visual+inertial properties and rely on a cylinder for collisions, comment the line above and uncomment the two below  -->
-      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="23.6" contype="0" conaffinity="0"/>  no collision because the convex hull is too large-->
-      <geom name="tower_collision" type="cylinder"  rgba="0 0 0 0.4" size="0.11 0.14" pos="0 0 0.2" density="23.6"/> 
+      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="23.6" contype="0" conaffinity="0"/>  <!--<!--no collision because the convex hull is too large-->-->
+      <geom name="tower_collision" type="cylinder"  size="0.11 0.14" pos="0 0 0.2" density="23.6" rgba="0.18 0.8 0.44 1.0"  /> 
       <geom name="ballast" type="box" size="0.1 0.1  0.1" rgba="0.5 0.5 0.0 0.5" density="400" pos="0 0 0.002" contype="0" conaffinity="0" group="3"/>   to lower center of mass
+
+      <body name="cam_0_body" pos="0.1 0 0.06" euler="180 0 0">
+        <geom name="cam_0_geom" type="mesh" mesh="cone_mesh" rgba="1.0 1.0 0.0 1.0" density="1.0" pos="0 0 0"/>  
+        <camera name="cam_0" pos="0 0 0" euler="180 0 0" fovy="90"/>
+      </body>
+
+      <body name="cam_1_body" pos="-0.1 0 0.06" euler="180 0 0">
+        <geom name="cam_1_geom" type="mesh" mesh="cone_mesh" rgba="1.0 1.0 0.0 1.0" density="1.0" pos="0 0 0"/>  
+        <camera name="cam_1" pos="0 0 0" euler="180 0 0" fovy="90"/>
+      </body>
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
         <!--each omniwheel is about 0.054kg on the real robot-->
