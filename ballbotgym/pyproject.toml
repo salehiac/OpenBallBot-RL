@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ballbotgym"
+version = "0.1.0"
+dependencies = [
+  #mujoco doesn't appear here because currently, we need the patched version
+  "gymnasium",
+  "numpy-quaternion",
+  "matplotlib",
+]
