@@ -18,14 +18,36 @@ from utils import plot_vectors
 from assets import OmniWheelRef
 
 
+class RGBDInputs:
+
+    def __init__(self,mjc_model, cam_name, height, width, normalize=True):
+
+        self.renderer_rgb=mujoco.Renderer(model, width=width, height=height)
+        self.renderer_d=mujoco.Renderer(model, width=width, height=height)
+        self.renderer_d.enable_depth_rendering()
+
+        self.cam_name=cam_name
+        self.normalize=normalize
+
+    def __call__(self, data):
+
+        self.renderer_rgb.update_scene(data, camera=self.cam_name)  
+        self.renderer_d.update_scene(data, camera=self.cam_name)  
+        rgb=self.renderer_rgb.render().astype("float")
+        depth=np.expand_dims(self.renderer_d.render(),axis=-1)
+
+        if self.normalize:
+            rgb/=255.0
+        return np.concatenate([rgb, depth],-1)
+
 
 # Load the model
 model = mujoco.MjModel.from_xml_path(sys.argv[1])
 data = mujoco.MjData(model)
 
 #apply random force at init
-random_force = np.random.uniform(-5, 5, size=3)
-data.xfrc_applied[model.body("base").id, :3] = random_force
+random_force = np.random.uniform(-15, 15, size=3)
+#data.xfrc_applied[model.body("base").id, :3] = random_force
 
 #print masses
 total_mass = 0
@@ -39,9 +61,10 @@ print(colored(f"total_mass: {total_mass}", "magenta", attrs=["bold"]))
 omni=OmniWheelRef()
 ctrl_hist=[]
 
-renderer = mujoco.Renderer(model, width=240, height=240) #you can access the cameras through the GUI though. This is for getting images to feed to policies etc
-cam_fig=plt.figure()
-cam_fig_ax=cam_fig.add_subplot()
+#NOTE: you can access the cameras through the GUI though. This is for getting rgbd images to feed to policies etc
+rgbd_inputs=[RGBDInputs(model, cam_name="cam_0", height=480, width=480), RGBDInputs(model, cam_name="cam_1", height=480, width=480)]
+cam_fig, cam_fig_ax=plt.subplots(2,2)
+
 if 1:
     with mujoco.viewer.launch_passive(model, data) as viewer:
 
@@ -65,15 +88,20 @@ if 1:
             imu_accel = data.sensordata[:3]  # First 3 values: Accelerometer
             imu_gyro = data.sensordata[3:6]  # Next 3 values: Gyroscope
 
-
-            #renderer.update_scene(data, camera="cam_0")  
-            #pixels = renderer.render()
-            #cam_fig_ax.imshow(pixels)
-            #plt.pause(0.01)
-            #plt.show()
+            rgbd_0=rgbd_inputs[0](data)
+            rgbd_1=rgbd_inputs[1](data)
+            cam_fig_ax[0,0].imshow(rgbd_0[:,:,:3])
+            cam_fig_ax[0,1].imshow(rgbd_0[:,:,3])
+            cam_fig_ax[1,0].imshow(rgbd_1[:,:,:3])
+            cam_fig_ax[1,1].imshow(rgbd_1[:,:,3])
+            plt.pause(0.0001)
+            plt.show()
 
             #print("Accelerometer:", imu_accel)
             #print("Gyroscope:", imu_gyro)
+
+            #if 1:
+            #    continue
 
             body_id = model.body("base").id  
             position = data.xpos[body_id]  

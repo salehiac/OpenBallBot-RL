@@ -13,12 +13,13 @@
     <mesh name="cone_mesh" file="cone.stl" scale="0.01 0.01 0.01"/> 
     <!-- sphere_small < sphere < sphere_2 -->
     <mesh name="sphere_mesh" file="sphere_small.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+   
     <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance=".2"/>
+    
     <texture name="basketball_tex" type="2d" file="basketball_texture.png"/>
     <material name="basketball_mat" texture="basketball_tex" shininess="0.2"/>
-    <texture name="metal_tex" type="2d" file="texture_metal.png" random="0.5"/>
-    <material name="metal_mat" texture="metal_tex" shininess="0.2" texuniform="false" texrepeat="2 2" />
+    
   </asset>
 
 
@@ -30,7 +31,7 @@
 
 
     <light name="top" pos="0 0 1.0"/>
-    <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.8 0.8 0.8 1" material="grid" friction="3.0"/>
+    <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.39 0.26 0.12 1"  friction="3.0"/>
     <!-- Base body with a free joint -->
     <body name="base" pos="0 0 0.22" euler="0 0 0">
     
@@ -87,7 +88,7 @@
       <freejoint />
       <!--the basketball should be around 0.6kg-->
       <!--<geom name="sphere" type="mesh" mesh="sphere_mesh" rgba="1 1 1 0.2" density="55" material="basketball_mat" />-->
-      <geom name="sphere" type="sphere" size="0.09" pos="0 0 -0.14" rgba="1 1 1 0.2" density="55" material="basketball_mat" />
+      <geom name="sphere" type="sphere" size="0.09" pos="0 0 -0.14" rgba="1 1 1 1.0" density="55" material="basketball_mat" />
     </body>
   </worldbody>
 

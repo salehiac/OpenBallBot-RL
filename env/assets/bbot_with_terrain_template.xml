@@ -1,0 +1,127 @@
+<mujoco model="ballbot">
+  <compiler meshdir="stl_files" texturedir="textures" /> <!--path is relative to the xml file-->
+  <option timestep="0.001" />
+  <option cone="elliptic"/>
+
+
+
+  <asset>
+    <mesh name="base_mesh" file="tower.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+    <mesh name="omni_mesh_0" file="omniwheel_0.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+    <mesh name="omni_mesh_1" file="omniwheel_1.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+    <mesh name="omni_mesh_2" file="omniwheel_2.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+    <mesh name="cone_mesh" file="cone.stl" scale="0.01 0.01 0.01"/> 
+    <!-- sphere_small < sphere < sphere_2 -->
+    <mesh name="sphere_mesh" file="sphere_small.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
+   
+    <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300"/>
+    <material name="grid" texture="grid" texrepeat="8 8" reflectance=".2"/>
+    
+    <texture name="basketball_tex" type="2d" file="basketball_texture.png"/>
+    <material name="basketball_mat" texture="basketball_tex" shininess="0.2"/>
+    
+  </asset>
+
+  <worldbody>
+
+    <geom name="x_axis" type="capsule" fromto="0 0 0 0.2 0 0" size="0.005" rgba="1 0 0 1" contype="0" conaffinity="0"/>
+    <geom name="y_axis" type="capsule" fromto="0 0 0 0 0.2 0" size="0.005" rgba="0 1 0 1" contype="0" conaffinity="0"/>
+    <geom name="z_axis" type="capsule" fromto="0 0 0 0 0 0.2" size="0.005" rgba="0 0 1 1" contype="0" conaffinity="0"/>
+
+
+    <light name="top" pos="0 0 1.0"/>
+    <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.39 0.26 0.12 1"  friction="3.0"/>
+    <!-- Base body with a free joint -->
+    <body name="base" pos="0 0 0.22" euler="0 0 0">
+    
+      <freejoint />
+      <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
+      <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
+      <!-- if you want to use the convex hull for collision, uncomment the following line and comment the two ones that follow it -->
+      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6"/> -->
+      <!-- to not use the convex hull but instead use the mesh for visual+inertial properties and rely on a cylinder for collisions, comment the line above and uncomment the two below  -->
+      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="23.6" contype="0" conaffinity="0"/>  <!--<!--no collision because the convex hull is too large-->-->
+      <geom name="tower_collision" type="cylinder"  size="0.11 0.14" pos="0 0 0.2" density="23.6" rgba="0.18 0.8 0.44 1.0"  /> 
+      <geom name="ballast" type="box" size="0.1 0.1  0.1" rgba="0.5 0.5 0.0 0.5" density="400" pos="0 0 0.002" contype="0" conaffinity="0" group="3"/>   to lower center of mass
+
+      <body name="cam_0_body" pos="0.1 0 0.06" euler="180 0 0">
+        <geom name="cam_0_geom" type="mesh" mesh="cone_mesh" rgba="1.0 1.0 0.0 1.0" density="1.0" pos="0 0 0"/>  
+        <camera name="cam_0" pos="0 0 0" euler="180 0 0" fovy="90"/>
+      </body>
+
+      <body name="cam_1_body" pos="-0.1 0 0.06" euler="180 0 0">
+        <geom name="cam_1_geom" type="mesh" mesh="cone_mesh" rgba="1.0 1.0 0.0 1.0" density="1.0" pos="0 0 0"/>  
+        <camera name="cam_1" pos="0 0 0" euler="180 0 0" fovy="90"/>
+      </body>
+
+      <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <!--<geom name="wheel_mesh_0" type="mesh" mesh="omni_mesh_0"  density="620.0"  />-->
+         <geom name="wheel_mesh_0" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="1 0 0 1" material="grid"/>
+        <!--axis orientation from feedcad's python api, pos offset set manually-->
+        <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
+      </body>
+
+      <body name="wheel_1" pos="0 0 -0.001" euler="0 0 120">
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <!--<geom name="wheel_mesh_1" type="mesh" mesh="omni_mesh_1"  density="620.0"  />-->
+        <geom name="wheel_mesh_1" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 1 0 1" material="grid"/>
+        <!--axis orientation from feedcad's python api, pos offset set manually-->
+        <joint name="wheel_joint_1" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
+      </body>
+
+
+      <body name="wheel_2" pos="0 0 -0.001" euler="0 0 240">
+        <!--each omniwheel is about 0.054kg on the real robot-->
+        <!--<geom name="wheel_mesh_2" type="mesh" mesh="omni_mesh_2"  density="620.0"  />-->
+        <geom name="wheel_mesh_2" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 0 1 1" material="grid"/>
+        <!--axis orientation from feedcad's python api, pos offset set manually-->
+        <joint name="wheel_joint_2" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
+      </body>
+
+
+      <site name="imu_site" pos="0 0 0" size="0.01"/>
+
+    </body>
+
+    <body name="ball" pos="0 0.0 0.24">
+      <freejoint />
+      <!--the basketball should be around 0.6kg-->
+      <!--<geom name="sphere" type="mesh" mesh="sphere_mesh" rgba="1 1 1 0.2" density="55" material="basketball_mat" />-->
+      <geom name="sphere" type="sphere" size="0.09" pos="0 0 -0.14" rgba="1 1 1 1.0" density="55" material="basketball_mat" />
+    </body>
+
+
+    <!-- random stones --> 
+
+
+    <!-- end random stones --> 
+
+  </worldbody>
+
+  <actuator>
+    <!-- 600 deg/s is about 100rpm-->
+    <!--<velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-600 600" />-->
+    <!--<velocity name="motor_1" joint="wheel_joint_1" ctrlrange="-600 600" />-->
+    <!--<velocity name="motor_2" joint="wheel_joint_2" ctrlrange="-600 600" />-->
+
+    <!--torque control - easier to model. Note that gear just seems to scale the torque.-->
+    <motor name="motor_0" joint="wheel_joint_0" gear="1" ctrlrange="-10 10" />
+    <motor name="motor_1" joint="wheel_joint_1" gear="1" ctrlrange="-10 10" />  
+    <motor name="motor_2" joint="wheel_joint_2" gear="1" ctrlrange="-10 10" />
+  </actuator>
+
+  <contact>
+    <!--definitely the correct friction order-->
+    <pair name="non-isotropic0" geom1="sphere" geom2="wheel_mesh_0" condim="3" friction="0.001 1.0"/>
+    <pair name="non-isotropic1" geom1="sphere" geom2="wheel_mesh_1" condim="3" friction="0.001 1.0"/>
+    <pair name="non-isotropic2" geom1="sphere" geom2="wheel_mesh_2" condim="3" friction="0.001 1.0"/>
+  </contact>
+
+  <sensor>
+    <accelerometer name="imu_accel" site="imu_site"/>
+    <gyro name="imu_gyro" site="imu_site"/>
+  </sensor>
+
+</mujoco>
+
