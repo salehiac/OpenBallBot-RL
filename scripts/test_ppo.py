@@ -46,10 +46,11 @@ def make_env(render=False):
     def _init():
         env=gym.make(
                 "ballbot-v0.1",
-                GUI=render,
+                GUI=render,#should be disabled in parallel training
+                renderer=False,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
                 max_ep_steps=20000,
                 apply_random_force_at_init=True,
-                disable_cameras=False)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
+                disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
         return env
     return _init
         

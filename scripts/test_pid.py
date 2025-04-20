@@ -15,7 +15,8 @@ import ballbotgym
 
 env=gym.make(
         "ballbot-v0.1",
-        GUI=True,
+        GUI=False,#full mujoco GUI
+        renderer=True,#renders to log
         max_ep_steps=10000,
         apply_random_force_at_init=True,
         disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
@@ -32,7 +33,17 @@ for step_i in range(env.env.env.max_ep_steps):
     ctrl,_=pid.act(torch.tensor(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"]))).float())
     obs, reward, terminated, _, info=env.step(ctrl.numpy())
 
-print(colored(f"successfuly balanced robot for {step_i} steps","green",attrs=["bold"]))
+    #print(step_i,obs["orientation"])
+    #if step_i>10:
+    #    print(env.env.env.opt_timestep)
+    #    break
+
+    if terminated and not info["failure"]:#don't check for success here since success is defined w.r.t goal flag
+        print(colored(f"successfuly balanced robot for {step_i} steps","green",attrs=["bold"]))
+    elif terminated and info["failure"]:
+        print(colored("failed!","red",attrs=["bold"]))
+        break
+
 env.env.env.close()
     
            

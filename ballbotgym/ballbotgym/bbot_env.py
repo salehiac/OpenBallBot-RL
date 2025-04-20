@@ -7,6 +7,8 @@ import sys
 import time
 import matplotlib.pyplot as plt
 import quaternion
+import os
+import cv2
 
 from scipy.linalg import logm
 
@@ -18,12 +20,24 @@ class RGBDInputs:
 
     def __init__(self,mjc_model, cam_name, height, width, normalize=True):
 
+        self.width=width
+        self.height=height
+        
         self.renderer_rgb=mujoco.Renderer(mjc_model, width=width, height=height)
         self.renderer_d=mujoco.Renderer(mjc_model, width=width, height=height)
         self.renderer_d.enable_depth_rendering()
 
         self.cam_name=cam_name
         self.normalize=normalize
+
+    def reset(self,mjc_model):
+
+        self.renderer_rgb.close()
+        self.renderer_d.close()
+        
+        self.renderer_rgb=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
+        self.renderer_d=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
+        self.renderer_d.enable_depth_rendering()
 
     def __call__(self, data):
 
@@ -38,15 +52,55 @@ class RGBDInputs:
 
     def close(self):
 
+        self.renderer_rgb.close()
         self.renderer_rgb=None
+        self.renderer_d.close()
         self.renderer_d=None
+
+
+class SceneRenderer:
+
+    def __init__(self,model):
+
+        self.framerate = 60  # (Hz)
+
+        self.frames = []
+        self.width=480
+        self.height=480
+        self.renderer=mujoco.Renderer(model,width=self.width, height=self.height)
+
+    def reset(self, model, episode):
+
+        self.renderer.close()
+        self.renderer=mujoco.Renderer(model,width=self.width, height=self.height)
+        self.frames=[]
+        self.episode=episode
+
+    def __call__(self, data):
+
+        if len(self.frames) < data.time * self.framerate:
+            self.renderer.update_scene(data)
+            pixels = self.renderer.render()
+            self.frames.append(pixels)
+
+    def dump(self, path):
+
+        #pdb.set_trace()
+        dir_name=f"/episode_{self.episode}"
+        if not os.path.exists(path+dir_name):
+            os.mkdir(path+dir_name)
+        counter=0
+        for frame in self.frames:
+            cv2.imwrite(path+dir_name+f"/frame_{counter}.png",   cv2.merge(cv2.split(frame)[::-1]))
+            counter+=1
 
 
 class BBotSimulation(gym.Env):
 
     def __init__(self,
             xml_path,
-            GUI=False,
+            GUI=False,#full mujoco gui
+            renderer=True,#just scene render at 60fps
             apply_random_force_at_init=True,
             max_ep_steps=5000,
             im_shape={"h":128,"w":128},
@@ -64,6 +118,7 @@ class BBotSimulation(gym.Env):
 
         self.rgbd_inputs=[RGBDInputs(self.model, cam_name="cam_0", height=im_shape["h"], width=im_shape["w"]), RGBDInputs(self.model, cam_name="cam_1", height=im_shape["h"], width=im_shape["w"])]
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
+        self.scene_renderer=SceneRenderer(self.model) if renderer else None
 
         self.action_space=gym.spaces.Box(-10.0,10.0,shape=(3,),dtype=np.float64)
         self.observation_space=gym.spaces.Dict({
@@ -84,12 +139,16 @@ class BBotSimulation(gym.Env):
         self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
                                                      #the robot in the desired direction so that the relative goal remains the same. 
 
+        self.num_resets=0
+
     @property
     def opt_timestep(self):
         return self.model.opt.timestep
 
 
     def reset(self,seed=None,goal:str="random",**kwargs):
+
+        print("resetting_env...")
 
         super().reset(seed=seed)
 
@@ -101,9 +160,11 @@ class BBotSimulation(gym.Env):
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
 
 
-        random_force = np.random.uniform(-15, 15, size=3) if self.apply_random_force_at_init else None
+        random_force = np.random.uniform(-10, 10, size=3) if self.apply_random_force_at_init else None
+        #random_force=np.array([-11.77391146 , -3.03359904 ,  4.40871597])
         print("random_force applied at init (N)==",random_force)
-        self.data.xfrc_applied[self.model.body("base").id, :3] = random_force
+        if random_force is not None:
+            self.data.xfrc_applied[self.model.body("base").id, :3] = random_force
 
         self.prev_pos=None
         self.prev_orientation=None
@@ -111,8 +172,12 @@ class BBotSimulation(gym.Env):
         obs=self._get_obs()
         info=self._get_info()
 
-        
-        
+        for rgbd_input in self.rgbd_inputs:
+            rgbd_input.reset(self.model)
+        if self.scene_renderer is not None:
+            self.scene_renderer.reset(self.model,self.num_resets)
+       
+        self.num_resets+=1
         return obs, info
 
     def _get_obs(self):
@@ -171,6 +236,12 @@ class BBotSimulation(gym.Env):
         
         self.data.ctrl[:] = - ctrl
         mujoco.mj_step(self.model, self.data)
+        
+        self.data.xfrc_applied[self.model.body("base").id, :3] = np.zeros(3)#this is to reset the initial force that is applied. From the documentation,
+                                                                            #the force will be applied unless it is reset
+
+        if self.scene_renderer is not None:
+            self.scene_renderer(self.data)
 
         obs=self._get_obs()
         info=self._get_info()
@@ -191,7 +262,7 @@ class BBotSimulation(gym.Env):
         self.prev_data_time=self.data.time#to detect resets that happen in GUI
         self.step_counter+=1
 
-        if self.step_counter>self.max_ep_steps:
+        if self.step_counter>=self.max_ep_steps:
             print(f"terminated. Cause: {self.step_counter}>self.max_ep_steps")
             terminated=True
 
@@ -217,6 +288,8 @@ class BBotSimulation(gym.Env):
             terminated=True
 
         #print("step_counter==",self.step_counter)
+        if terminated and self.scene_renderer is not None:
+            self.scene_renderer.dump("/tmp/log_scene/")
 
         return obs, reward, terminated, truncated, info
 
@@ -228,6 +301,9 @@ class BBotSimulation(gym.Env):
 
         if self.passive_viewer:
             self.passive_viewer.close()
+
+        del self.model
+        del self.data
 
 
 
