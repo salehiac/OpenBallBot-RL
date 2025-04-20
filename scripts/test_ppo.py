@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import BaseCallback
 
 
-import bbot2d
+import ballbotgym
 
 class ReturnLoggingCallback(BaseCallback):
     def __init__(self, num_envs,verbose=0):
@@ -25,7 +25,7 @@ class ReturnLoggingCallback(BaseCallback):
 
         for e_i in range(self.num_envs):
             rew=self.locals["rewards"][e_i]
-            env_steps=self.locals["infos"][e_i]["num_steps"]
+            env_steps=self.locals["infos"][e_i]["step_counter"]
             self.G_tau_lst[e_i]+=(self.gamma**env_steps)*rew
             if self.locals["dones"][e_i]:
                 self.full_episode_returns.append(self.G_tau_lst[e_i])
@@ -44,13 +44,13 @@ class ReturnLoggingCallback(BaseCallback):
 
 def make_env(render=False):
     def _init():
-        return gym.make(
-                "bbot2d-v0.1",
-                no_ball=False,
-                render=render,
-                continuous_actions=False,
-                max_ep_steps=400)
-
+        env=gym.make(
+                "ballbot-v0.1",
+                GUI=render,
+                max_ep_steps=20000,
+                apply_random_force_at_init=True,
+                disable_cameras=False)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
+        return env
     return _init
         
 
@@ -58,7 +58,7 @@ if __name__=="__main__":
 
     if sys.argv[1]=="train":
        
-        N_ENVS = 16  # Adjust based on available compute
+        N_ENVS = 12  # Adjust based on available compute
         vec_env = SubprocVecEnv([make_env() for _ in range(N_ENVS)])
         
         # Define PPO model

@@ -8,6 +8,8 @@ import time
 import matplotlib.pyplot as plt
 import quaternion
 
+from scipy.linalg import logm
+
 import mujoco
 import mujoco.viewer
 
@@ -47,7 +49,7 @@ class BBotSimulation(gym.Env):
             GUI=False,
             apply_random_force_at_init=True,
             max_ep_steps=5000,
-            im_shape={"h":480,"w":480},
+            im_shape={"h":128,"w":128},
             disable_cameras=False):
         """
         """
@@ -63,18 +65,24 @@ class BBotSimulation(gym.Env):
         self.rgbd_inputs=[RGBDInputs(self.model, cam_name="cam_0", height=im_shape["h"], width=im_shape["w"]), RGBDInputs(self.model, cam_name="cam_1", height=im_shape["h"], width=im_shape["w"])]
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
 
-        self.action_space=gym.spaces.Box(-float("inf"),float("inf"),shape=(3,),dtype=np.float64)
+        self.action_space=gym.spaces.Box(-10.0,10.0,shape=(3,),dtype=np.float64)
         self.observation_space=gym.spaces.Dict({
-            "R_mat": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,3), dtype=np.float64),
+            "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+            "angular_vel": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
             "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
+            "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
             "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
             "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
             }) if not disable_cameras else gym.spaces.Dict({
-                "R_mat": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,3), dtype=np.float64),
+                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                "angular_vel": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
                 "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
+                "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
                 })
         self.disable_cameras=disable_cameras
 
+        self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
+                                                     #the robot in the desired direction so that the relative goal remains the same. 
 
     @property
     def opt_timestep(self):
@@ -97,8 +105,12 @@ class BBotSimulation(gym.Env):
         print("random_force applied at init (N)==",random_force)
         self.data.xfrc_applied[self.model.body("base").id, :3] = random_force
 
+        self.prev_pos=None
+        self.prev_orientation=None
+        
         obs=self._get_obs()
         info=self._get_info()
+
         
         
         return obs, info
@@ -111,20 +123,38 @@ class BBotSimulation(gym.Env):
 
         #these would come from IMU or SLAM etc on a real system
         body_id = self.model.body("base").id  
-        position = self.data.xpos[body_id].astype("float64")
-        orientation = quaternion.quaternion(*self.data.xquat[body_id])
-  
-        R_mat=quaternion.as_rotation_matrix(orientation).astype("float64")
+        position = self.data.xpos[body_id].copy().astype("float64")
+        orientation = quaternion.quaternion(*self.data.xquat[body_id].copy())
+        rot_vec=quaternion.as_rotation_vector(orientation).astype("float64")
+
+        #compute velocity
+        vel=(position-self.prev_pos)/self.opt_timestep if self.prev_pos is not None else np.zeros_like(position)
+        self.prev_pos=position
+        #angular_vel=
+
+        #compute angular velocity
+        if self.prev_orientation is not None:
+            #we compute the relative rotation between R_1 (orientation at previous timestamp) and R_2 (orientation at current timestamp)
+            #this should give us the rotation that has happened between the two timestamps. All that is left is to map those to Rodriguez representations
+            #and divide by the timestep
+            R_1=quaternion.as_rotation_matrix(self.prev_orientation)
+            R_2=quaternion.as_rotation_matrix(orientation)
+            W=logm(R_1.T @ R_2).real
+            vee = lambda S: np.array([S[2,1], S[0,2], S[1,0]])
+            angular_vel=vee(W)
+        else:
+            angular_vel=np.zeros_like(rot_vec)
+        self.prev_orientation=orientation
 
         if self.disable_cameras:
-            obs={"R_mat":R_mat, "pos":position}
+            obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel}
         else:
-            obs={"R_mat":R_mat, "pos":position, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
+            obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
         return obs
     
     def _get_info(self):
         
-        info={"success":False,"failure":False}
+        info={"success":False,"failure":False,"step_counter":self.step_counter}
 
         return info
    
@@ -148,6 +178,13 @@ class BBotSimulation(gym.Env):
         terminated=False
         truncated=False
 
+        dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
+        reward=-dist_to_goal
+        early_fail_penalty=reward*(self.max_episode_steps-self.step_counter) if terminated else 0.0
+        reward+=early_fail_penalty
+
+        #pdb.set_trace()
+
         if self.passive_viewer:
             self.passive_viewer.sync()
 
@@ -160,7 +197,7 @@ class BBotSimulation(gym.Env):
 
         #compute angle with upright vector
         gravity=np.array([0,0,-1.0]).astype("float").reshape(3,1)
-        gravity_local=(obs["R_mat"].T @ (gravity)).reshape(3)
+        gravity_local=(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"])).T @ (gravity)).reshape(3)
 
         up_axis_local=np.array([0,0,1]).astype("float")
         angle_in_degrees=np.arccos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
@@ -173,22 +210,15 @@ class BBotSimulation(gym.Env):
             info["failure"]=True
             terminated=True
 
+        elif dist_to_goal<0.01:
+
+            info["success"]=True
+            info["failure"]=False
+            terminated=True
+
         #print("step_counter==",self.step_counter)
 
         return obs, reward, terminated, truncated, info
-
-
-    def plot_obs(self):
-
-        pass
-
-        #plt.ion()
-        #cam_fig_ax[0,0].imshow(rgbd_0[:,:,:3])
-        #cam_fig_ax[0,1].imshow(rgbd_0[:,:,3])
-        #cam_fig_ax[1,0].imshow(rgbd_1[:,:,:3])
-        #cam_fig_ax[1,1].imshow(rgbd_1[:,:,3])
-        #plt.pause(0.0001)
-        #plt.show()
 
 
     def close(self):

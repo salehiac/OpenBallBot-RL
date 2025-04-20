@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import pdb
 import matplotlib.pyplot as plt
+import quaternion
 
 import torch
 from termcolor import colored
@@ -28,7 +29,7 @@ pid=policies.PID(dt=env.env.env.opt_timestep,
 obs, _=env.reset()
 for step_i in range(env.env.env.max_ep_steps):
     
-    ctrl,_=pid.act(torch.tensor(obs["R_mat"]).float())
+    ctrl,_=pid.act(torch.tensor(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"]))).float())
     obs, reward, terminated, _, info=env.step(ctrl.numpy())
 
 print(colored(f"successfuly balanced robot for {step_i} steps","green",attrs=["bold"]))
