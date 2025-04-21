@@ -28,10 +28,14 @@ pid=policies.PID(dt=env.env.env.opt_timestep,
         k_d=k_vals[2])
 
 obs, _=env.reset()
+
+G_tau=0
+gamma=0.999999
 for step_i in range(env.env.env.max_ep_steps):
     
     ctrl,_=pid.act(torch.tensor(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"]))).float())
     obs, reward, terminated, _, info=env.step(ctrl.numpy())
+    G_tau+=gamma**step_i*reward
 
     #print(step_i,obs["orientation"])
     #if step_i>10:
@@ -44,6 +48,7 @@ for step_i in range(env.env.env.max_ep_steps):
         print(colored("failed!","red",attrs=["bold"]))
         break
 
+print("G_tau==",G_tau)
 env.env.env.close()
     
            

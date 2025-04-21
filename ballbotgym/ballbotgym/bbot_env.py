@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import quaternion
 import os
 import cv2
+import string
 
 from scipy.linalg import logm
 
@@ -141,6 +142,10 @@ class BBotSimulation(gym.Env):
 
         self.num_resets=0
 
+        rand_str=''.join(np.random.permutation(list(string.ascii_letters + string.digits))[:12])
+        self.log_dir="/tmp/log_"+rand_str
+        os.mkdir(self.log_dir)
+
     @property
     def opt_timestep(self):
         return self.model.opt.timestep
@@ -250,10 +255,9 @@ class BBotSimulation(gym.Env):
         truncated=False
 
         dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
-        reward=-dist_to_goal
-        early_fail_penalty=reward*(self.max_episode_steps-self.step_counter) if terminated else 0.0
-        reward+=early_fail_penalty
+        reward=-dist_to_goal#early fail penalty is added later
 
+     
         #pdb.set_trace()
 
         if self.passive_viewer:
@@ -274,12 +278,14 @@ class BBotSimulation(gym.Env):
         angle_in_degrees=np.arccos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
        
         max_allowed_tilt=20
-        if angle_in_degrees>max_allowed_tilt:
+        if angle_in_degrees>max_allowed_tilt or obs["pos"][-1]<0.1:#if the robot is too tilted or if it has fallen (e.g. out of the bounds of the plane)
             print(f"failure after {self.step_counter}. Reason: tilte_angle > {max_allowed_tilt} ")
 
             info["success"]=False
             info["failure"]=True
             terminated=True
+            early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
+            reward+=early_fail_penalty
 
         elif dist_to_goal<0.01:
 
@@ -289,7 +295,7 @@ class BBotSimulation(gym.Env):
 
         #print("step_counter==",self.step_counter)
         if terminated and self.scene_renderer is not None:
-            self.scene_renderer.dump("/tmp/log_scene/")
+            self.scene_renderer.dump(self.log_dir)
 
         return obs, reward, terminated, truncated, info
 

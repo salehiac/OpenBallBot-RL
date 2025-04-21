@@ -42,12 +42,12 @@ class ReturnLoggingCallback(BaseCallback):
         return True
 
 
-def make_env(render=False):
+def make_env(gui=True,render_to_logs=False):
     def _init():
         env=gym.make(
                 "ballbot-v0.1",
-                GUI=render,#should be disabled in parallel training
-                renderer=False,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
+                GUI=gui,#should be disabled in parallel training
+                renderer=render_to_logs,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
                 max_ep_steps=20000,
                 apply_random_force_at_init=True,
                 disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
@@ -59,15 +59,15 @@ if __name__=="__main__":
 
     if sys.argv[1]=="train":
        
-        N_ENVS = 12  # Adjust based on available compute
+        N_ENVS = 1  # Adjust based on available compute
         vec_env = SubprocVecEnv([make_env() for _ in range(N_ENVS)])
         
         # Define PPO model
-        model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.01)
+        model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.1)
         
         # Train the model
         callback = ReturnLoggingCallback(N_ENVS)
-        model.learn(total_timesteps=800000,callback=callback)
+        model.learn(total_timesteps=10000000,callback=callback)
         #model.learn(total_timesteps=200000)
         
         # Save and test the model
@@ -76,15 +76,24 @@ if __name__=="__main__":
 
     elif sys.argv[1]=="test":
 
-        env=make_env(render=True)()
+        env=make_env(gui=True,render_to_logs=True)()
 
         model = PPO.load(sys.argv[2])
 
         obs, _ = env.reset()
         done = False
-        
+       
+        G_tau=0
+        gamma=0.99999
+        count=0
         while not done:
             action, _ = model.predict(obs, deterministic=True)  # Use deterministic policy for testing
+            print(action)
             obs, reward, done, truncated, info = env.step(action)
-        
+
+            G_tau+=gamma**count*reward
+            count+=1
+
+
+        print("G_tau==",G_tau) 
         env.close()
