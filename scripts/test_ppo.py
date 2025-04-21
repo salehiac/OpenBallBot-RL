@@ -3,10 +3,11 @@ import numpy as np
 import sys
 import json
 import pdb
+import torch
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
 
 
 import ballbotgym
@@ -42,7 +43,7 @@ class ReturnLoggingCallback(BaseCallback):
         return True
 
 
-def make_env(gui=True,render_to_logs=False):
+def make_env(gui=False,render_to_logs=False):
     def _init():
         env=gym.make(
                 "ballbot-v0.1",
@@ -59,20 +60,31 @@ if __name__=="__main__":
 
     if sys.argv[1]=="train":
        
-        N_ENVS = 1  # Adjust based on available compute
+        N_ENVS = 16 # Adjust based on available compute
         vec_env = SubprocVecEnv([make_env() for _ in range(N_ENVS)])
         
         # Define PPO model
-        model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.0001)
+        #model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.01,device="cpu",learning_rate=1e-5)
+        model = PPO("MultiInputPolicy", vec_env, verbose=1,use_sde=True,device="cpu",learning_rate=1e-5)
         #pdb.set_trace()
         
         # Train the model
-        callback = ReturnLoggingCallback(N_ENVS)
+        callback = CallbackList([
+            ReturnLoggingCallback(N_ENVS),
+            CheckpointCallback(
+                save_freq=10000,               # Save every N timesteps
+                save_path="./log/checkpoints/",    # Directory to save models
+                name_prefix="ppo_agent"        # File name prefix
+                )
+            ])
+
+
+        #pdb.set_trace()
         model.learn(total_timesteps=10000000,callback=callback)
         #model.learn(total_timesteps=200000)
         
         # Save and test the model
-        model.save("ppo_bbot")
+        model.save("./log/final_ppo_agent")
         vec_env.close()
 
     elif sys.argv[1]=="test":

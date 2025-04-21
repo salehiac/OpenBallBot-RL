@@ -104,7 +104,7 @@ class BBotSimulation(gym.Env):
             GUI=False,#full mujoco gui
             renderer=True,#just scene render at 60fps
             apply_random_force_at_init=True,
-            max_ep_steps=5000,
+            max_ep_steps=10000,
             im_shape={"h":128,"w":128},
             disable_cameras=False):
         """
@@ -223,7 +223,7 @@ class BBotSimulation(gym.Env):
             obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel}
         else:
             obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
-        print("obs==\n",obs)
+        #print("obs==\n",obs)
         return obs
     
     def _get_info(self):
@@ -310,6 +310,7 @@ class BBotSimulation(gym.Env):
         if terminated:
             print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
 
+        reward/=50000#normalization constant to avoid exploding losses
         return obs, reward, terminated, truncated, info
 
 
