@@ -10,6 +10,7 @@ import quaternion
 import os
 import cv2
 import string
+from termcolor import colored
 
 from scipy.linalg import logm
 
@@ -121,7 +122,7 @@ class BBotSimulation(gym.Env):
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
         self.scene_renderer=SceneRenderer(self.model) if renderer else None
 
-        self.action_space=gym.spaces.Box(-10.0,10.0,shape=(3,),dtype=np.float64)
+        self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
         self.observation_space=gym.spaces.Dict({
             "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
             "angular_vel": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
@@ -181,6 +182,8 @@ class BBotSimulation(gym.Env):
             rgbd_input.reset(self.model)
         if self.scene_renderer is not None:
             self.scene_renderer.reset(self.model,self.num_resets)
+
+        self.G_tau=0.0
        
         self.num_resets+=1
         return obs, info
@@ -211,7 +214,7 @@ class BBotSimulation(gym.Env):
             R_2=quaternion.as_rotation_matrix(orientation)
             W=logm(R_1.T @ R_2).real
             vee = lambda S: np.array([S[2,1], S[0,2], S[1,0]])
-            angular_vel=vee(W)
+            angular_vel=vee(W)/self.opt_timestep
         else:
             angular_vel=np.zeros_like(rot_vec)
         self.prev_orientation=orientation
@@ -220,6 +223,7 @@ class BBotSimulation(gym.Env):
             obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel}
         else:
             obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
+        print("obs==\n",obs)
         return obs
     
     def _get_info(self):
@@ -233,11 +237,14 @@ class BBotSimulation(gym.Env):
         omniwheel_commands  np.tensor of shape(3,)
         """
 
+        #print("commands==",omniwheel_commands)
+
         if self.data.time==0.0 and self.step_counter>0.0:#reset done in GUI
             print("RESET DUE TO RESET FROM GUI")
             self.reset()
 
-        ctrl=np.clip(omniwheel_commands,a_min=-10,a_max=10)
+        ctrl=omniwheel_commands*10
+        ctrl=np.clip(ctrl,a_min=-10,a_max=10)#in case of pid issues
         
         self.data.ctrl[:] = - ctrl
         mujoco.mj_step(self.model, self.data)
@@ -250,12 +257,12 @@ class BBotSimulation(gym.Env):
 
         obs=self._get_obs()
         info=self._get_info()
-        reward=0.0
         terminated=False
         truncated=False
 
         dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
         reward=-dist_to_goal#early fail penalty is added later
+        #print("reward==",reward)-->
 
      
         #pdb.set_trace()
@@ -287,6 +294,7 @@ class BBotSimulation(gym.Env):
             early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
             reward+=early_fail_penalty
 
+
         elif dist_to_goal<0.01:
 
             info["success"]=True
@@ -296,6 +304,11 @@ class BBotSimulation(gym.Env):
         #print("step_counter==",self.step_counter)
         if terminated and self.scene_renderer is not None:
             self.scene_renderer.dump(self.log_dir)
+
+        gamma=1.0#not used algorithmically here anyway
+        self.G_tau+=(gamma**self.step_counter)*reward
+        if terminated:
+            print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
 
         return obs, reward, terminated, truncated, info
 
