@@ -106,6 +106,7 @@ class BBotSimulation(gym.Env):
             apply_random_force_at_init=True,
             max_ep_steps=10000,
             im_shape={"h":128,"w":128},
+            test_only=False,
             disable_cameras=False):
         """
         """
@@ -147,6 +148,8 @@ class BBotSimulation(gym.Env):
         self.log_dir="/tmp/log_"+rand_str
         os.mkdir(self.log_dir)
 
+        self.test_only=test_only
+
     @property
     def opt_timestep(self):
         return self.model.opt.timestep
@@ -186,6 +189,10 @@ class BBotSimulation(gym.Env):
         self.G_tau=0.0
        
         self.num_resets+=1
+
+        if self.test_only:
+            self.pos_hist=[]
+            self.reward_hist=[]
         return obs, info
 
     def _get_obs(self):
@@ -261,8 +268,15 @@ class BBotSimulation(gym.Env):
         truncated=False
 
         dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
-        reward=-dist_to_goal#early fail penalty is added later
-        #print("reward==",reward)-->
+        reward=-dist_to_goal/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
+
+        #print(self.goal_2d, "         ",obs["pos"][:-1])
+        #print("reward==",reward)
+
+
+        if self.test_only:
+            self.pos_hist.append(obs["pos"][:-1])
+            self.reward_hist.append(reward)
 
      
         #pdb.set_trace()
@@ -310,7 +324,14 @@ class BBotSimulation(gym.Env):
         if terminated:
             print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
 
-        reward/=50000#normalization constant to avoid exploding losses
+            if self.test_only:
+                import matplotlib.pyplot as plt
+                aa=np.concatenate([np.array(x).reshape(1,2) for x in self.pos_hist],0)
+                plt.plot(aa[:,0],aa[:,1],"r*")
+                plt.show()
+                plt.plot(self.reward_hist,"b")
+                plt.show()
+
         return obs, reward, terminated, truncated, info
 
 

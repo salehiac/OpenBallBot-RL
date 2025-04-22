@@ -43,7 +43,7 @@ class ReturnLoggingCallback(BaseCallback):
         return True
 
 
-def make_env(gui=False,render_to_logs=False):
+def make_env(gui=False,render_to_logs=False,test_only=False):
     def _init():
         env=gym.make(
                 "ballbot-v0.1",
@@ -51,6 +51,7 @@ def make_env(gui=False,render_to_logs=False):
                 renderer=render_to_logs,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
                 max_ep_steps=20000,
                 apply_random_force_at_init=False,
+                test_only=test_only,
                 disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
         return env
     return _init
@@ -64,8 +65,8 @@ if __name__=="__main__":
         vec_env = SubprocVecEnv([make_env() for _ in range(N_ENVS)])
         
         # Define PPO model
-        #model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.01,device="cpu",learning_rate=1e-5)
-        model = PPO("MultiInputPolicy", vec_env, verbose=1,use_sde=True,device="cpu",learning_rate=1e-5)
+        model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.5,device="cpu",learning_rate=1e-5,n_steps=5000)
+        #model = PPO("MultiInputPolicy", vec_env, verbose=1,use_sde=True,device="cpu",learning_rate=1e-5)
         #pdb.set_trace()
         
         # Train the model
@@ -89,7 +90,7 @@ if __name__=="__main__":
 
     elif sys.argv[1]=="test":
 
-        env=make_env(gui=True,render_to_logs=True)()
+        env=make_env(gui=True,render_to_logs=True,test_only=True)()
 
         model = PPO.load(sys.argv[2])
 
