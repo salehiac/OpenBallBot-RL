@@ -16,7 +16,6 @@ os.mkdir(log_dir)
 env=gym.make(
         "ballbot-v0.1",
         GUI=True,
-        max_ep_steps=10000,
         apply_random_force_at_init=True)
 
 obs, _=env.reset()

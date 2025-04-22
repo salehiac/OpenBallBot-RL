@@ -49,7 +49,6 @@ def make_env(gui=False,render_to_logs=False,test_only=False):
                 "ballbot-v0.1",
                 GUI=gui,#should be disabled in parallel training
                 renderer=render_to_logs,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
-                max_ep_steps=20000,
                 apply_random_force_at_init=False,
                 test_only=test_only,
                 disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
@@ -65,7 +64,7 @@ if __name__=="__main__":
         vec_env = SubprocVecEnv([make_env() for _ in range(N_ENVS)])
         
         # Define PPO model
-        model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.5,device="cpu",learning_rate=1e-5,n_steps=5000)
+        model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.5,device="cpu",learning_rate=1e-5,n_steps=100)
         #model = PPO("MultiInputPolicy", vec_env, verbose=1,use_sde=True,device="cpu",learning_rate=1e-5)
         #pdb.set_trace()
         
@@ -107,6 +106,7 @@ if __name__=="__main__":
 
             G_tau+=gamma**count*reward
             count+=1
+            print(f'step={count}')
 
 
         print("G_tau==",G_tau) 

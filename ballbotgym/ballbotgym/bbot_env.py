@@ -104,7 +104,6 @@ class BBotSimulation(gym.Env):
             GUI=False,#full mujoco gui
             renderer=True,#just scene render at 60fps
             apply_random_force_at_init=True,
-            max_ep_steps=10000,
             im_shape={"h":128,"w":128},
             test_only=False,
             disable_cameras=False):
@@ -114,7 +113,7 @@ class BBotSimulation(gym.Env):
 
         self.xml_path= xml_path
         self.apply_random_force_at_init=apply_random_force_at_init
-        self.max_ep_steps=max_ep_steps
+        self.max_ep_steps=2000
         
         self.model=mujoco.MjModel.from_xml_path(self.xml_path)
         self.data = mujoco.MjData(self.model)
@@ -299,6 +298,7 @@ class BBotSimulation(gym.Env):
         angle_in_degrees=np.arccos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
        
         max_allowed_tilt=20
+        early_fail_penalty=0.0
         if angle_in_degrees>max_allowed_tilt or obs["pos"][-1]<0.1:#if the robot is too tilted or if it has fallen (e.g. out of the bounds of the plane)
             print(f"failure after {self.step_counter}. Reason: tilte_angle > {max_allowed_tilt} ")
 

@@ -17,7 +17,6 @@ env=gym.make(
         "ballbot-v0.1",
         GUI=True,#full mujoco GUI
         renderer=True,#renders to log
-        max_ep_steps=10000,
         apply_random_force_at_init=True,
         disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
 
