@@ -31,7 +31,7 @@
     <geom name="z_axis" type="capsule" fromto="0 0 0 0 0 0.2" size="0.005" rgba="0 0 1 1" contype="0" conaffinity="0"/>
 
     <!-- goal. It is fixed here because we assume that we know how to pivot the ballbot around itself so that it will always have the same relative goal. This will be much more efficient than doing goal conditioned RL. TODO: learn a policy to orient the robot the way that you want.  -->
-    <geom name="goal" type="capsule" fromto="0 1 0 0 1 0.2" size="0.005" rgba="1 0 1 1" contype="0" conaffinity="0"/>
+    <geom name="goal" type="capsule" fromto="0 0.5 0 0 0.5 0.2" size="0.005" rgba="1 0 1 1" contype="0" conaffinity="0"/>
 
     <light name="top" pos="0 0 1.0"/>
     <geom name="ground" type="plane" size="5 5 0.1" pos="0 0 0" rgba="0.39 0.26 0.12 1"  friction="3.0"/>

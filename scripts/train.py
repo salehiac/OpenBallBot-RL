@@ -49,10 +49,20 @@ def main(args):
        
         N_ENVS = args.num_envs
         vec_env = SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)])
-      
+     
+        policy_kwargs = dict(activation_fn=torch.nn.Tanh,
+                     net_arch=dict(pi=[64, 64], vf=[64, 64]))
+        
         #device is set to cpu because from the documentation, stabe_baseline_3's PPO is meant to run on cpu
         if not args.resume:
-            model = PPO("MultiInputPolicy", vec_env, verbose=1,ent_coef=0.5,device="cpu",learning_rate=1e-5,n_steps=100)#n_steps means n_steps per env before update
+            model = PPO("MultiInputPolicy", 
+                    vec_env,
+                    verbose=1,
+                    ent_coef=0.1,
+                    device="cpu",
+                    learning_rate=5e-5,
+                    policy_kwargs=policy_kwargs)
+                    #n_steps=2000)#n_steps means n_steps per env before update
         else:
             model=PPO.load(args.resume,device="cpu",env=vec_env)
         

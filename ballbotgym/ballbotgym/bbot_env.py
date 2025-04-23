@@ -113,8 +113,8 @@ class BBotSimulation(gym.Env):
 
         self.xml_path= xml_path
         self.apply_random_force_at_init=apply_random_force_at_init
-        self.max_ep_steps=5000
-        
+        self.max_ep_steps=2000
+
         self.model=mujoco.MjModel.from_xml_path(self.xml_path)
         self.data = mujoco.MjData(self.model)
 
@@ -314,6 +314,7 @@ class BBotSimulation(gym.Env):
 
 
         elif dist_to_goal<0.01:
+            print(colored(f"Success! Dist to goal=={dist_to_goal}","green",attrs=["bold"]))
 
             info["success"]=True
             info["failure"]=False
