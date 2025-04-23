@@ -10,4 +10,7 @@ dependencies = [
   "gymnasium",
   "numpy-quaternion",
   "matplotlib",
+  "scipy",
+  "opencv-python",
+  "termcolor"
 ]
