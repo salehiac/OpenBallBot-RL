@@ -113,12 +113,16 @@ class BBotSimulation(gym.Env):
 
         self.xml_path= xml_path
         self.apply_random_force_at_init=apply_random_force_at_init
-        self.max_ep_steps=2000
+        self.max_ep_steps=5000
         
         self.model=mujoco.MjModel.from_xml_path(self.xml_path)
         self.data = mujoco.MjData(self.model)
 
-        self.rgbd_inputs=[RGBDInputs(self.model, cam_name="cam_0", height=im_shape["h"], width=im_shape["w"]), RGBDInputs(self.model, cam_name="cam_1", height=im_shape["h"], width=im_shape["w"])]
+        self.rgbd_inputs=None
+        if not disable_cameras:
+            self.rgbd_inputs=[RGBDInputs(self.model, cam_name="cam_0", height=im_shape["h"], width=im_shape["w"]), RGBDInputs(self.model, cam_name="cam_1", height=im_shape["h"], width=im_shape["w"])]
+        self.disable_cameras=disable_cameras
+
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
         self.scene_renderer=SceneRenderer(self.model) if renderer else None
 
@@ -136,7 +140,6 @@ class BBotSimulation(gym.Env):
                 "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
                 "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
                 })
-        self.disable_cameras=disable_cameras
 
         self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
                                                      #the robot in the desired direction so that the relative goal remains the same. 
@@ -180,8 +183,9 @@ class BBotSimulation(gym.Env):
         obs=self._get_obs()
         info=self._get_info()
 
-        for rgbd_input in self.rgbd_inputs:
-            rgbd_input.reset(self.model)
+        if not self.disable_cameras:
+            for rgbd_input in self.rgbd_inputs:
+                rgbd_input.reset(self.model)
         if self.scene_renderer is not None:
             self.scene_renderer.reset(self.model,self.num_resets)
 
