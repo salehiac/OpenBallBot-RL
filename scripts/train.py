@@ -58,11 +58,13 @@ def main(args):
             model = PPO("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
-                    ent_coef=0.1,
+                    ent_coef=0.01,
                     device="cpu",
-                    learning_rate=5e-5,
-                    policy_kwargs=policy_kwargs)
-                    #n_steps=2000)#n_steps means n_steps per env before update
+                    clip_range=0.1,#default is 0.2
+                    vf_coef=0.5,#default i 0.5
+                    learning_rate=1e-5,
+                    policy_kwargs=policy_kwargs,
+                    n_steps=2000)#n_steps means n_steps per env before update
         else:
             model=PPO.load(args.resume,device="cpu",env=vec_env)
         

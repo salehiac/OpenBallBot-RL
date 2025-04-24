@@ -7,4 +7,5 @@ with open(sys.argv[1],"r") as fl:
 
 
 plt.plot(Gs)
+plt.grid("on")
 plt.show()

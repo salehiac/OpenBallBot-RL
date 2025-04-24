@@ -271,6 +271,7 @@ class BBotSimulation(gym.Env):
         truncated=False
 
         dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
+        #print(f"dist_to_goal=={dist_to_goal}")
         reward=-dist_to_goal/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
 
         #print(self.goal_2d, "         ",obs["pos"][:-1])
