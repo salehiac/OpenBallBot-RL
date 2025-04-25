@@ -5,7 +5,7 @@ import pdb
 import torch
 import argparse
 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
 
@@ -45,14 +45,17 @@ class ReturnLoggingCallback(BaseCallback):
 
 def main(args):
 
+
+    N_ENVS = args.num_envs
+    vec_env = SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)])
+     
+    policy_kwargs = dict(activation_fn=torch.nn.Tanh,
+            net_arch=dict(pi=[1024, 1024], vf=[1024, 1024]))
+
+
     if args.algo=="ppo":
        
-        N_ENVS = args.num_envs
-        vec_env = SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)])
-     
-        policy_kwargs = dict(activation_fn=torch.nn.Tanh,
-                     net_arch=dict(pi=[64, 64], vf=[64, 64]))
-        
+               
         #device is set to cpu because from the documentation, stabe_baseline_3's PPO is meant to run on cpu
         if not args.resume:
             model = PPO("MultiInputPolicy", 
@@ -68,21 +71,36 @@ def main(args):
         else:
             model=PPO.load(args.resume,device="cpu",env=vec_env)
         
-        callback = CallbackList([
-            ReturnLoggingCallback(N_ENVS),
-            CheckpointCallback(
-                save_freq=10000,               
-                save_path=f"{args.out}/checkpoints/", 
-                name_prefix="ppo_agent"     
-                )
-            ])
+    elif args.algo=="sac":
 
-        model.learn(total_timesteps=10000000,callback=callback)
-        
-        model.save(f"{args.out}/log/final_ppo_agent")
-        vec_env.close()
+        if not args.resume:
+            model = SAC("MultiInputPolicy", 
+                    vec_env,
+                    verbose=1,
+                    device="cuda")
+        else:
+            model=SAC.load(args.resume,device="cuda",env=vec_env)
+    
     else:
         raise Exception("Unknown algo")
+
+
+    callback = CallbackList([
+        ReturnLoggingCallback(N_ENVS),
+        CheckpointCallback(
+            save_freq=10000,               
+            save_path=f"{args.out}/checkpoints/", 
+            name_prefix="ppo_agent"     
+            )
+        ])
+
+    model.learn(total_timesteps=10000000,callback=callback)
+        
+    model.save(f"{args.out}/log/final_{args.algo}_agent")
+    vec_env.close()
+
+
+
  
 
 if __name__=="__main__":

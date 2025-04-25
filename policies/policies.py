@@ -38,7 +38,12 @@ class PID(Policy):
         self.return_in_pitch_roll_space=False
 
 
-    def act(self, R_mat:torch.tensor):
+    def act(self, R_mat:torch.tensor,setpoint_r=0, setpoint_p=0):
+        """
+        setpoint_p  pitch target
+        setpoint_r  roll target
+        """
+
 
         with torch.no_grad():
 
@@ -57,7 +62,6 @@ class PID(Policy):
             roll=torch.atan2(R_mat[2,1],R_mat[2,2]);
             pitch=torch.atan2(-R_mat[2,0],torch.sqrt(R_mat[2,1]**2+R_mat[2,2]**2));
 
-            setpoint_r=setpoint_p=0
             error_vec_2d[0]=setpoint_p-pitch
             error_vec_2d[1]=setpoint_r-roll
 

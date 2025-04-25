@@ -13,6 +13,13 @@ import policies
 import gymnasium as gym
 import ballbotgym
 
+
+if len(sys.argv)==3:
+    _setpoint_p=float(sys.argv[1])*np.pi/180
+    _setpoint_r=float(sys.argv[2])*np.pi/180
+else:
+    _setpoint_r=_setpoint_p=0
+
 env=gym.make(
         "ballbot-v0.1",
         GUI=True,#full mujoco GUI
@@ -32,7 +39,11 @@ G_tau=0
 gamma=0.999999
 for step_i in range(env.env.env.max_ep_steps):
     
-    ctrl,_=pid.act(torch.tensor(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"]))).float())
+    ctrl,_=pid.act(
+            torch.tensor(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"]))).float(),
+            setpoint_r=_setpoint_r,
+            setpoint_p=_setpoint_p,
+            )
     obs, reward, terminated, _, info=env.step(ctrl.numpy())
     G_tau+=gamma**step_i*reward
 

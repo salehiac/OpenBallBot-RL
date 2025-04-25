@@ -343,8 +343,9 @@ class BBotSimulation(gym.Env):
 
     def close(self):
 
-        for i in range(len(self.rgbd_inputs)):
-            self.rgbd_inputs[i].close()
+        if not self.disable_cameras:
+            for i in range(len(self.rgbd_inputs)):
+                self.rgbd_inputs[i].close()
 
         if self.passive_viewer:
             self.passive_viewer.close()
