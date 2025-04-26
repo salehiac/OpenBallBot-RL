@@ -248,6 +248,7 @@ class BBotSimulation(gym.Env):
                     print(colored(f"******************************* value of {k} is {self.max_abs_obs[k]}","red",attrs=["bold"]))
 
             #print(self.max_abs_obs)
+        #print(obs)
         return obs
     
     def _get_info(self):
@@ -287,12 +288,28 @@ class BBotSimulation(gym.Env):
         dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
         #print(f"dist_to_goal=={dist_to_goal}")
         #reward=-(dist_to_goal**2)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
-        reward=-(dist_to_goal)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
+        #reward=-(dist_to_goal)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
 
         #print(self.goal_2d, "         ",obs["pos"][:-1])
         #print("reward==",reward)
 
+     
+        def get_reward(pos2d):
+            """
+            Note: currenlty assumes that the goal is at (0,some_y)
+            """
 
+            dx=0.1
+            dy=0.1
+
+            if pos2d[0]<-dx or pos2d[0]>dx:
+                return 0.0
+
+            reward=np.clip(pos2d[1]/self.goal_2d[1],a_min=0,a_max=1.0)
+            return reward
+
+        reward=get_reward(obs["pos"][:-1])
+        reward/=100
             
         #pdb.set_trace()
 
@@ -321,14 +338,14 @@ class BBotSimulation(gym.Env):
             info["success"]=False
             info["failure"]=True
             terminated=True
-            early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
+            #early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
             #early_fail_penalty=-1.0
-            reward+=early_fail_penalty
+            #reward+=early_fail_penalty
 
         elif dist_to_goal<0.01:
             print(colored(f"Success! Dist to goal=={dist_to_goal}","green",attrs=["bold"]))
 
-            reward+=1.0
+            #reward+=1.0
 
             info["success"]=True
             info["failure"]=False

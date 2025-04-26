@@ -59,7 +59,8 @@ def main(args):
     #vec_env = VecNormalize(SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)]),norm_reward=True)
     vec_env = SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)])
      
-    policy_kwargs = dict(activation_fn=torch.nn.Tanh,
+    #policy_kwargs = dict(activation_fn=torch.nn.Tanh,
+    policy_kwargs = dict(activation_fn=torch.nn.LeakyReLU,
             net_arch=dict(pi=[64, 64], vf=[64, 64]))
 
 
