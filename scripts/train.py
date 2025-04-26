@@ -7,7 +7,7 @@ import random
 import argparse
 
 from stable_baselines3 import PPO, SAC
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
 from stable_baselines3.common.noise import VectorizedActionNoise, NormalActionNoise
 
@@ -56,6 +56,7 @@ def main(args):
 
 
     N_ENVS = args.num_envs
+    #vec_env = VecNormalize(SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)]),norm_reward=True)
     vec_env = SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)])
      
     policy_kwargs = dict(activation_fn=torch.nn.Tanh,
@@ -70,11 +71,11 @@ def main(args):
             model = PPO("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
-                    ent_coef=0.05,
+                    ent_coef=0.02,
                     device="cpu",
                     clip_range=0.1,#default is 0.2
                     vf_coef=0.5,#default i 0.5
-                    learning_rate=1e-4,#lr_schedule,
+                    learning_rate=5e-5,#lr_schedule,
                     policy_kwargs=policy_kwargs,
                     n_steps=2000)#n_steps means n_steps per env before update
         else:

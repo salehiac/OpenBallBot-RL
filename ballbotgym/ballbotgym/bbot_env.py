@@ -129,14 +129,14 @@ class BBotSimulation(gym.Env):
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
         self.observation_space=gym.spaces.Dict({
             "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-            "angular_vel": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+            "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
             "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
             "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
             "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
             "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
             }) if not disable_cameras else gym.spaces.Dict({
                 "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                "angular_vel": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
                 "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
                 "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
                 })
@@ -151,6 +151,8 @@ class BBotSimulation(gym.Env):
         os.mkdir(self.log_dir)
 
         self.test_only=test_only
+
+        self.max_abs_obs={x:-1 for x in ["orientation", "angular_vel", "vel", "pos"]}
 
     @property
     def opt_timestep(self):
@@ -212,6 +214,7 @@ class BBotSimulation(gym.Env):
 
         #compute velocity
         vel=(position-self.prev_pos)/self.opt_timestep if self.prev_pos is not None else np.zeros_like(position)
+        vel=np.clip(vel,a_min=-2.0,a_max=2.0)
         self.prev_pos=position
         #angular_vel=
 
@@ -224,7 +227,7 @@ class BBotSimulation(gym.Env):
             R_2=quaternion.as_rotation_matrix(orientation)
             W=logm(R_1.T @ R_2).real
             vee = lambda S: np.array([S[2,1], S[0,2], S[1,0]])
-            angular_vel=vee(W)/self.opt_timestep
+            angular_vel=np.clip(vee(W)/self.opt_timestep,a_min=-2.0,a_max=2.0)
         else:
             angular_vel=np.zeros_like(rot_vec)
         self.prev_orientation=orientation
@@ -234,6 +237,17 @@ class BBotSimulation(gym.Env):
         else:
             obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
         #print("obs==\n",obs)
+       
+        if 0:
+            for k in self.max_abs_obs.keys():
+
+                self.max_abs_obs[k]=max(self.max_abs_obs[k],abs(obs[k]).max())
+                if self.max_abs_obs[k]>2.0:
+                    print(colored(f"value of {k} is {self.max_abs_obs[k]}","red"))
+                elif self.max_abs_obs[k]>5:
+                    print(colored(f"******************************* value of {k} is {self.max_abs_obs[k]}","red",attrs=["bold"]))
+
+            #print(self.max_abs_obs)
         return obs
     
     def _get_info(self):
@@ -272,7 +286,8 @@ class BBotSimulation(gym.Env):
 
         dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
         #print(f"dist_to_goal=={dist_to_goal}")
-        reward=-(dist_to_goal**2)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
+        #reward=-(dist_to_goal**2)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
+        reward=-(dist_to_goal)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
 
         #print(self.goal_2d, "         ",obs["pos"][:-1])
         #print("reward==",reward)
@@ -306,8 +321,8 @@ class BBotSimulation(gym.Env):
             info["success"]=False
             info["failure"]=True
             terminated=True
-            #early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
-            early_fail_penalty=-1.0
+            early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
+            #early_fail_penalty=-1.0
             reward+=early_fail_penalty
 
         elif dist_to_goal<0.01:
