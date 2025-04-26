@@ -3,11 +3,13 @@ import sys
 import json
 import pdb
 import torch
+import random
 import argparse
 
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
+from stable_baselines3.common.noise import VectorizedActionNoise, NormalActionNoise
 
 sys.path.append("..")
 from utils import make_ballbot_env
@@ -43,6 +45,13 @@ class ReturnLoggingCallback(BaseCallback):
 
         return True
 
+def lr_schedule(progress_remaining):
+
+    # progress_remaining goes from 1 (beginning) to 0 (end)
+    return 5e-5 * progress_remaining
+
+
+
 def main(args):
 
 
@@ -50,7 +59,7 @@ def main(args):
     vec_env = SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)])
      
     policy_kwargs = dict(activation_fn=torch.nn.Tanh,
-            net_arch=dict(pi=[1024, 1024], vf=[1024, 1024]))
+            net_arch=dict(pi=[64, 64], vf=[64, 64]))
 
 
     if args.algo=="ppo":
@@ -61,25 +70,41 @@ def main(args):
             model = PPO("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
-                    ent_coef=0.01,
+                    ent_coef=0.05,
                     device="cpu",
                     clip_range=0.1,#default is 0.2
                     vf_coef=0.5,#default i 0.5
-                    learning_rate=1e-5,
+                    learning_rate=1e-4,#lr_schedule,
                     policy_kwargs=policy_kwargs,
                     n_steps=2000)#n_steps means n_steps per env before update
         else:
             model=PPO.load(args.resume,device="cpu",env=vec_env)
+
+
+        #pdb.set_trace()
         
+        total_timesteps=2e6
+
+
     elif args.algo=="sac":
 
+        policy_kwargs = dict(net_arch=dict(pi=[64, 64], qf=[64, 64]))
+
+        normal_noise=NormalActionNoise(np.zeros(3),np.ones(3))
+        vec_noise=VectorizedActionNoise(normal_noise,N_ENVS)
         if not args.resume:
             model = SAC("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
+                    learning_rate=1e-4,
+                    #ent_coef=0.1,#let's keep the auto one which is proportional to reward
+                    action_noise=vec_noise,
+                    policy_kwargs=policy_kwargs,
                     device="cuda")
         else:
             model=SAC.load(args.resume,device="cuda",env=vec_env)
+
+        total_timesteps=10e6
     
     else:
         raise Exception("Unknown algo")
@@ -88,15 +113,15 @@ def main(args):
     callback = CallbackList([
         ReturnLoggingCallback(N_ENVS),
         CheckpointCallback(
-            save_freq=10000,               
+            save_freq=1000,               
             save_path=f"{args.out}/checkpoints/", 
             name_prefix="ppo_agent"     
             )
         ])
 
-    model.learn(total_timesteps=10000000,callback=callback)
+    model.learn(total_timesteps=total_timesteps,callback=callback)
         
-    model.save(f"{args.out}/log/final_{args.algo}_agent")
+    model.save(f"{args.out}/final_{args.algo}_agent")
     vec_env.close()
 
 
@@ -105,6 +130,8 @@ def main(args):
 
 if __name__=="__main__":
 
+
+       
     _parser = argparse.ArgumentParser(description="Train a policy.")
     _parser.add_argument("--algo", type=str,help="choices are ppo, ...",required=True)#algorithm params are hardcoded for ballbot
     _parser.add_argument("--num_envs", type=int, default=16)
@@ -112,6 +139,23 @@ if __name__=="__main__":
     _parser.add_argument("--resume", type=str, help="path to model",default="")
 
     _args = _parser.parse_args()
+
+    repeatable=True
+    if repeatable:
+        _seed = 127
+        random.seed(_seed)
+        np.random.seed(_seed)
+        torch.manual_seed(_seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(_seed)
+            torch.cuda.manual_seed_all(_seed)
+
+        from stable_baselines3.common.utils import set_random_seed
+        set_random_seed(_seed)
+    
     main(_args)
 
    

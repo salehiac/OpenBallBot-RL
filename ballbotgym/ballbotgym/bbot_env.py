@@ -272,17 +272,13 @@ class BBotSimulation(gym.Env):
 
         dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
         #print(f"dist_to_goal=={dist_to_goal}")
-        reward=-dist_to_goal/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
+        reward=-(dist_to_goal**2)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
 
         #print(self.goal_2d, "         ",obs["pos"][:-1])
         #print("reward==",reward)
 
 
-        if self.test_only:
-            self.pos_hist.append(obs["pos"][:-1])
-            self.reward_hist.append(reward)
-
-     
+            
         #pdb.set_trace()
 
         if self.passive_viewer:
@@ -310,12 +306,14 @@ class BBotSimulation(gym.Env):
             info["success"]=False
             info["failure"]=True
             terminated=True
-            early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
+            #early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
+            early_fail_penalty=-1.0
             reward+=early_fail_penalty
-
 
         elif dist_to_goal<0.01:
             print(colored(f"Success! Dist to goal=={dist_to_goal}","green",attrs=["bold"]))
+
+            reward+=1.0
 
             info["success"]=True
             info["failure"]=False
@@ -338,6 +336,13 @@ class BBotSimulation(gym.Env):
                 plt.plot(self.reward_hist,"b")
                 plt.show()
 
+
+        if self.test_only:
+            self.pos_hist.append(obs["pos"][:-1])
+            self.reward_hist.append(reward)
+
+
+        #print("reward==",reward)
         return obs, reward, terminated, truncated, info
 
 
