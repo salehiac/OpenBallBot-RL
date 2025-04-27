@@ -45,12 +45,6 @@ class ReturnLoggingCallback(BaseCallback):
 
         return True
 
-def lr_schedule(progress_remaining):
-
-    # progress_remaining goes from 1 (beginning) to 0 (end)
-    return 5e-5 * progress_remaining
-
-
 
 def main(args):
 
@@ -76,7 +70,7 @@ def main(args):
                     device="cpu",
                     clip_range=0.1,#default is 0.2
                     vf_coef=0.5,#default i 0.5
-                    learning_rate=5e-5,#lr_schedule,
+                    learning_rate=5e-5,
                     policy_kwargs=policy_kwargs,
                     n_steps=2000)#n_steps means n_steps per env before update
         else:
@@ -85,7 +79,7 @@ def main(args):
 
         #pdb.set_trace()
         
-        total_timesteps=2e6
+        total_timesteps=5e6
 
 
     elif args.algo=="sac":
