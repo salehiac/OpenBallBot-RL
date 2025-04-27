@@ -61,7 +61,7 @@ def main(args):
      
     #policy_kwargs = dict(activation_fn=torch.nn.Tanh,
     policy_kwargs = dict(activation_fn=torch.nn.LeakyReLU,
-            net_arch=dict(pi=[64, 64], vf=[64, 64]))
+            net_arch=dict(pi=[512, 512], vf=[512, 512]))
 
 
     if args.algo=="ppo":
