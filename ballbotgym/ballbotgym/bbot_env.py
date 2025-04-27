@@ -6,12 +6,13 @@ from typing import List
 import sys
 import time
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  
 import quaternion
 import os
 import cv2
 import string
-from termcolor import colored
 
+from termcolor import colored
 from scipy.linalg import logm
 
 import mujoco
@@ -143,6 +144,9 @@ class BBotSimulation(gym.Env):
 
         self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
                                                      #the robot in the desired direction so that the relative goal remains the same. 
+        assert self.goal_2d[0]==0.0, "currently assumed to be on the world x axis (the robot can be reoriented to face that goal)"
+        self.reward_obj=Reward(self.goal_2d[1])
+        #self.reward_obj.plot_reward()
 
         self.num_resets=0
 
@@ -285,34 +289,10 @@ class BBotSimulation(gym.Env):
         terminated=False
         truncated=False
 
-        dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
-        #print(f"dist_to_goal=={dist_to_goal}")
-        #reward=-(dist_to_goal**2)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
-        #reward=-(dist_to_goal)/1000#early fail penalty is added later. The normalization constant is fixed empirically. 50k was much too high, it seemed like there was not learning at all
-
-        #print(self.goal_2d, "         ",obs["pos"][:-1])
-        #print("reward==",reward)
-
+        #dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
+        reward=self.reward_obj(obs["pos"][:-1])
+        reward/=100#normalization to get better gradients
      
-        def get_reward(pos2d):
-            """
-            Note: currenlty assumes that the goal is at (0,some_y)
-            """
-
-            dx=0.1
-            dy=0.1
-
-            if pos2d[0]<-dx or pos2d[0]>dx:
-                return 0.0
-
-            reward=np.clip(pos2d[1]/self.goal_2d[1],a_min=0,a_max=1.0)
-            return reward
-
-        reward=get_reward(obs["pos"][:-1])
-        reward/=100
-            
-        #pdb.set_trace()
-
         if self.passive_viewer:
             self.passive_viewer.sync()
 
@@ -338,18 +318,8 @@ class BBotSimulation(gym.Env):
             info["success"]=False
             info["failure"]=True
             terminated=True
-            #early_fail_penalty=reward*(self.max_ep_steps-self.step_counter)
             early_fail_penalty=-1.0
             reward+=early_fail_penalty
-
-        elif dist_to_goal<0.01:
-            print(colored(f"Success! Dist to goal=={dist_to_goal}","green",attrs=["bold"]))
-
-            #reward+=1.0
-
-            info["success"]=True
-            info["failure"]=False
-            terminated=True
 
         #print("step_counter==",self.step_counter)
         if terminated and self.scene_renderer is not None:
@@ -391,6 +361,49 @@ class BBotSimulation(gym.Env):
         del self.data
 
 
+
+class Reward:
+
+    def __init__(self, goal_y):
+        """
+        assumes a goal that is on the x axis
+        """
+        self.goal_y=goal_y
+
+    def __call__(self,pos2d):
+
+        dx=0.1
+        dy=0.1
+
+        if (pos2d[0]<-dx or pos2d[0]>dx) or (pos2d[1]<0 or pos2d[1]>self.goal_y):
+            return 0.0
+
+        reward=np.clip(pos2d[1]/self.goal_y,a_min=0.0,a_max=1.0)
+        return reward
+
+    def plot_reward(self,min_x=-2.0,max_x=2.0,min_y=-2.0,max_y=2.0):
+        """
+        debug function
+        """
+
+        x = np.linspace(min_x,max_x, 500)
+        y = np.linspace(min_y,max_y, 500)
+        x, y = np.meshgrid(x, y)
+        z=np.zeros_like(x)
+        for ii in range(x.shape[0]):
+            for jj in range(x.shape[1]):
+                z[ii,jj]=self([x[ii,jj],y[ii,jj]])
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(x, y, z, cmap='viridis')
+        
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        
+        plt.show()
+ 
 
 def main(args):
 
