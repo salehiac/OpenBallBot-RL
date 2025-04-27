@@ -10,13 +10,14 @@ from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
 from stable_baselines3.common.noise import VectorizedActionNoise, NormalActionNoise
+from stable_baselines3.common.logger import configure
 
 sys.path.append("..")
 from utils import make_ballbot_env
 
 
 class ReturnLoggingCallback(BaseCallback):
-    def __init__(self, num_envs,verbose=0):
+    def __init__(self, num_envs, log_dir, verbose=0):
         super().__init__(verbose)
         self.num_envs=num_envs
         self.G_tau_lst=[0.0]*self.num_envs
@@ -24,6 +25,11 @@ class ReturnLoggingCallback(BaseCallback):
 
         self.full_episode_returns=[]
         self.returns_report=[]
+
+        self.num_steps_total=0
+        self.steps_report=[]
+
+        self.log_path=log_dir+"/G_tau_lst"
 
     def _on_step(self):
 
@@ -35,13 +41,16 @@ class ReturnLoggingCallback(BaseCallback):
                 self.full_episode_returns.append(self.G_tau_lst[e_i])
                 self.G_tau_lst[e_i]=0.0
 
+            self.num_steps_total+=1
+
         while len(self.full_episode_returns)>=self.num_envs:
             avg_ret=np.mean(self.full_episode_returns[:self.num_envs])
             self.full_episode_returns=self.full_episode_returns[self.num_envs:]
             self.returns_report.append(avg_ret)
+            self.steps_report.append(self.num_steps_total)
 
-        with open("/tmp/G_tau_report","w") as fl:
-            json.dump(self.returns_report,fl)
+        with open(self.log_path,"w") as fl:
+            json.dump({"avg_returns":self.returns_report,"total_steps":self.steps_report},fl)
 
         return True
 
@@ -81,6 +90,10 @@ def main(args):
         
         total_timesteps=5e6
 
+        ppo_log_path= f"{args.out}/ppo_log/"
+        ppo_logger= configure(ppo_log_path, ["stdout", "csv"])
+        model.set_logger(ppo_logger)
+
 
     elif args.algo=="sac":
 
@@ -107,7 +120,7 @@ def main(args):
 
 
     callback = CallbackList([
-        ReturnLoggingCallback(N_ENVS),
+        ReturnLoggingCallback(N_ENVS,log_dir=f"{args.out}/"),
         CheckpointCallback(
             save_freq=1000,               
             save_path=f"{args.out}/checkpoints/", 

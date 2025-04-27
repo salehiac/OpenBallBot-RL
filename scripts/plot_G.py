@@ -9,6 +9,6 @@ with open(sys.argv[1],"r") as fl:
 limit=int(sys.argv[2]) if len(sys.argv)==3 else -1
 
 
-plt.plot(Gs[:limit])
+plt.plot(Gs["total_steps"][:limit],Gs["avg_returns"][:limit])
 plt.grid("on")
 plt.show()

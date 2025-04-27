@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from typing import List, Optional
 import numpy as np
 
+from stable_baselines3.common.monitor import Monitor
 import gymnasium as gym
 
 import ballbotgym
@@ -15,7 +16,7 @@ def make_ballbot_env(gui=False,render_to_logs=False,test_only=False):
                 apply_random_force_at_init=False,
                 test_only=test_only,
                 disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
-        return env
+        return Monitor(env) #using a Monitor wrapper to enable logging rollout avg rewards 
     return _init
 
 
