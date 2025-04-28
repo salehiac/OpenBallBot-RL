@@ -58,16 +58,17 @@ class ReturnLoggingCallback(BaseCallback):
 def main(args):
 
 
-    N_ENVS = args.num_envs
-    #vec_env = VecNormalize(SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)]),norm_reward=True)
-    vec_env = SubprocVecEnv([make_ballbot_env() for _ in range(N_ENVS)])
-     
+        
     #policy_kwargs = dict(activation_fn=torch.nn.Tanh,
     policy_kwargs = dict(activation_fn=torch.nn.LeakyReLU,
             net_arch=dict(pi=[512, 512], vf=[512, 512]))
 
 
     if args.algo=="ppo":
+
+        N_ENVS = args.num_envs
+        vec_env = SubprocVecEnv([make_ballbot_env(goal_type="fixed") for _ in range(N_ENVS)])
+
        
                
         #device is set to cpu because from the documentation, stabe_baseline_3's PPO is meant to run on cpu
@@ -99,6 +100,9 @@ def main(args):
 
 
     elif args.algo=="sac":
+
+        N_ENVS = args.num_envs
+        vec_env = SubprocVecEnv([make_ballbot_env(goal_type="fixed") for _ in range(N_ENVS)])
 
         policy_kwargs = dict(net_arch=dict(pi=[64, 64], qf=[64, 64]))
 

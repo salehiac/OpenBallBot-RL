@@ -25,7 +25,7 @@
     <geom name="y_axis" type="capsule" fromto="0 0 0 0 0.2 0" size="0.005" rgba="0 1 0 1" contype="0" conaffinity="0"/>
     <geom name="z_axis" type="capsule" fromto="0 0 0 0 0 0.2" size="0.005" rgba="0 0 1 1" contype="0" conaffinity="0"/>
 
-    <!-- goal. It is fixed here because we assume that we know how to pivot the ballbot around itself so that it will always have the same relative goal. This will be much more efficient than doing goal conditioned RL. TODO: learn a policy to orient the robot the way that you want.  -->
+    <!--Only algorithms that use goal_type=="fixed" will use this field. Algos using "directional" will edit the xml post loading-->
     <geom name="goal" type="capsule" fromto="0 0.5 0 0 0.5 0.2" size="0.005" rgba="1 0 1 1" contype="0" conaffinity="0"/>
     <geom name="boulip" type="capsule" fromto="0.1 0 0 0.1 0 0.2" size="0.005" rgba="1 1 0 1" contype="0" conaffinity="0"/>
     <geom name="-boulip" type="capsule" fromto="-0.1 0 0 -0.1 0 0.2" size="0.005" rgba="1 1 0 1" contype="0" conaffinity="0"/>

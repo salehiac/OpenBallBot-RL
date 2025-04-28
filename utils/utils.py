@@ -7,11 +7,18 @@ import gymnasium as gym
 
 import ballbotgym
 
-def make_ballbot_env(gui=False,render_to_logs=False,test_only=False):
+def make_ballbot_env(gui=False,
+        goal_type="directional",
+        render_to_logs=False,
+        test_only=False):
+    """
+    goal_type can be 'fixed', 'directional', 'stop'
+    """
     def _init():
         env=gym.make(
                 "ballbot-v0.1",
                 GUI=gui,#should be disabled in parallel training
+                goal_type=goal_type,
                 renderer=render_to_logs,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
                 apply_random_force_at_init=False,
                 test_only=test_only,

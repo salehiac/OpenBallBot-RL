@@ -11,12 +11,15 @@ import quaternion
 import os
 import cv2
 import string
+import re
 
 from termcolor import colored
 from scipy.linalg import logm
 
 import mujoco
 import mujoco.viewer
+
+from . import Rewards
 
 
 class RGBDInputs:
@@ -102,6 +105,7 @@ class BBotSimulation(gym.Env):
 
     def __init__(self,
             xml_path,
+            goal_type:str,
             GUI=False,#full mujoco gui
             renderer=True,#just scene render at 60fps
             apply_random_force_at_init=True,
@@ -109,14 +113,48 @@ class BBotSimulation(gym.Env):
             test_only=False,
             disable_cameras=False):
         """
+        goal_type can be 'fixed', 'directional', 'stop'
+        test_only just gathers some additional debug data - TODO: remove it, I guess?
         """
         super().__init__()
 
-        self.xml_path= xml_path
-        self.apply_random_force_at_init=apply_random_force_at_init
-        self.max_ep_steps=5000
 
-        self.model=mujoco.MjModel.from_xml_path(self.xml_path)
+        self.xml_path= xml_path
+        self.goal_type=goal_type
+        if goal_type=="fixed":
+            self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
+                                                         #the robot in the desired direction so that the relative goal remains the same. 
+            assert self.goal_2d[0]==0.0, "fixed goal should be on the world x axis" 
+            self.reward_obj=Rewards.FixedReward(self.goal_2d[1])
+            self.reward_obj.plot_reward()
+
+            self.apply_random_force_at_init=apply_random_force_at_init
+            self.max_ep_steps=5000
+
+            self.model=mujoco.MjModel.from_xml_path(self.xml_path)
+
+        elif goal_type=="directional":
+
+            with open(self.xml_path, "r") as fl:
+                
+                xml_string = fl.read()
+                xml_string_after = re.sub(r'^.*name="goal".*\n?', '<new line content>\n', xml_string, flags=re.MULTILINE)
+
+
+
+                with open("/tmp/garbage_1.xml","w") as ff:
+                    ff.write(xml_string_after)
+                pdb.set_trace()
+
+
+                model = mujoco.MjModel.from_xml_string(xml_string)
+
+        elif goal_type=="stop":
+            
+            raise Exception("not implemented yet")
+        else: 
+            raise Exception("unknown goal type {goal_type}")
+
         self.data = mujoco.MjData(self.model)
 
         self.rgbd_inputs=None
@@ -142,12 +180,7 @@ class BBotSimulation(gym.Env):
                 "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
                 })
 
-        self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
-                                                     #the robot in the desired direction so that the relative goal remains the same. 
-        assert self.goal_2d[0]==0.0, "currently assumed to be on the world x axis (the robot can be reoriented to face that goal)"
-        self.reward_obj=Reward(self.goal_2d[1])
-        #self.reward_obj.plot_reward()
-
+        
         self.num_resets=0
 
         rand_str=''.join(np.random.permutation(list(string.ascii_letters + string.digits))[:12])
@@ -362,48 +395,7 @@ class BBotSimulation(gym.Env):
 
 
 
-class Reward:
 
-    def __init__(self, goal_y):
-        """
-        assumes a goal that is on the x axis
-        """
-        self.goal_y=goal_y
-
-    def __call__(self,pos2d):
-
-        dx=0.1
-        dy=0.1
-
-        if (pos2d[0]<-dx or pos2d[0]>dx) or (pos2d[1]<0 or pos2d[1]>self.goal_y):
-            return 0.0
-
-        reward=np.clip(pos2d[1]/self.goal_y,a_min=0.0,a_max=1.0)
-        return reward
-
-    def plot_reward(self,min_x=-2.0,max_x=2.0,min_y=-2.0,max_y=2.0):
-        """
-        debug function
-        """
-
-        x = np.linspace(min_x,max_x, 500)
-        y = np.linspace(min_y,max_y, 500)
-        x, y = np.meshgrid(x, y)
-        z=np.zeros_like(x)
-        for ii in range(x.shape[0]):
-            for jj in range(x.shape[1]):
-                z[ii,jj]=self([x[ii,jj],y[ii,jj]])
-        
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot_surface(x, y, z, cmap='viridis')
-        
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        
-        plt.show()
- 
 
 def main(args):
 
