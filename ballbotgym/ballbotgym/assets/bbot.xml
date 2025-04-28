@@ -6,13 +6,8 @@
 
 
   <asset>
-    <mesh name="base_mesh" file="tower.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
-    <mesh name="omni_mesh_0" file="omniwheel_0.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
-    <mesh name="omni_mesh_1" file="omniwheel_1.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
-    <mesh name="omni_mesh_2" file="omniwheel_2.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
     <mesh name="cone_mesh" file="cone.stl" scale="0.01 0.01 0.01"/> 
     <!-- sphere_small < sphere < sphere_2 -->
-    <mesh name="sphere_mesh" file="sphere_small.stl" scale="0.001 0.001 0.001"/> <!-- rescaling because freecad uses mm but mujoco uses meters-->
    
     <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance=".2"/>
@@ -61,16 +56,12 @@
       </body>
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
-        <!--each omniwheel is about 0.054kg on the real robot-->
-        <!--<geom name="wheel_mesh_0" type="mesh" mesh="omni_mesh_0"  density="620.0"  />-->
          <geom name="wheel_mesh_0" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="1 0 0 1" material="grid"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
 
       <body name="wheel_1" pos="0 0 -0.001" euler="0 0 120">
-        <!--each omniwheel is about 0.054kg on the real robot-->
-        <!--<geom name="wheel_mesh_1" type="mesh" mesh="omni_mesh_1"  density="620.0"  />-->
         <geom name="wheel_mesh_1" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 1 0 1" material="grid"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_1" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
@@ -78,8 +69,6 @@
 
 
       <body name="wheel_2" pos="0 0 -0.001" euler="0 0 240">
-        <!--each omniwheel is about 0.054kg on the real robot-->
-        <!--<geom name="wheel_mesh_2" type="mesh" mesh="omni_mesh_2"  density="620.0"  />-->
         <geom name="wheel_mesh_2" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 0 1 1" material="grid"/>
         <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_2" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
@@ -92,17 +81,11 @@
     <body name="ball" pos="0 0.0 0.24">
       <freejoint />
       <!--the basketball should be around 0.6kg-->
-      <!--<geom name="sphere" type="mesh" mesh="sphere_mesh" rgba="1 1 1 0.2" density="55" material="basketball_mat" />-->
       <geom name="sphere" type="sphere" size="0.09" pos="0 0 -0.14" rgba="1 1 1 1.0" density="55" material="basketball_mat" />
     </body>
   </worldbody>
 
   <actuator>
-    <!-- 600 deg/s is about 100rpm-->
-    <!--<velocity name="motor_0" joint="wheel_joint_0" ctrlrange="-600 600" />-->
-    <!--<velocity name="motor_1" joint="wheel_joint_1" ctrlrange="-600 600" />-->
-    <!--<velocity name="motor_2" joint="wheel_joint_2" ctrlrange="-600 600" />-->
-
     <!--torque control - easier to model. Note that gear just seems to scale the torque.-->
     <motor name="motor_0" joint="wheel_joint_0" gear="1" ctrlrange="-10 10" />
     <motor name="motor_1" joint="wheel_joint_1" gear="1" ctrlrange="-10 10" />  

@@ -90,9 +90,12 @@ def main(args):
         
         total_timesteps=5e6
 
-        ppo_log_path= f"{args.out}/ppo_log/"
+        ppo_log_path= f"{args.out}/"
         ppo_logger= configure(ppo_log_path, ["stdout", "csv"])
         model.set_logger(ppo_logger)
+
+        with open(f"{args.out}/info.txt","w") as fl:
+            json.dump(args.__dict__,fl)
 
 
     elif args.algo=="sac":
@@ -146,12 +149,13 @@ if __name__=="__main__":
     _parser.add_argument("--num_envs", type=int, default=16)
     _parser.add_argument("--out", type=str, default="./log/", help="output path")
     _parser.add_argument("--resume", type=str, help="path to model",default="")
+    _parser.add_argument("--seed", type=int, help="For repeatability/debug. Passing -1 (which is default) disables this. Args used in paper are 0,127,45,31,871",default=-1)
 
     _args = _parser.parse_args()
 
-    repeatable=True
+    repeatable=True if _args.seed!=-1 else False
     if repeatable:
-        _seed = 127
+        _seed = _args.seed
         random.seed(_seed)
         np.random.seed(_seed)
         torch.manual_seed(_seed)
