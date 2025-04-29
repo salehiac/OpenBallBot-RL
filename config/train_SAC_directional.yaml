@@ -1,0 +1,11 @@
+algo:
+  name: sac
+  learning_rate: 1e-4
+  n_steps: 2000 #n_steps means n_steps per env before update
+  action_noise_sigma: 0.1
+goal_type: directional 
+hidden_sz: 512
+num_envs: 8
+resume: ""
+out: ./log
+seed: 0
