@@ -60,14 +60,15 @@ def main(config):
 
 
         
-    policy_kwargs = dict(
+   
+    if config["algo"]["name"]=="ppo":
+
+
+        policy_kwargs = dict(
             activation_fn=torch.nn.LeakyReLU,
             net_arch=dict(
                 pi=[config["hidden_sz"], config["hidden_sz"]],
                 vf=[config["hidden_sz"], config["hidden_sz"]]))
-
-
-    if config["algo"]["name"]=="ppo":
 
         N_ENVS = int(config["num_envs"])
 
@@ -92,50 +93,55 @@ def main(config):
         
         total_timesteps=5e6
 
-        ppo_log_path= f"{config['out']}/"
-        ppo_logger= configure(ppo_log_path, ["stdout", "csv"])
-        model.set_logger(ppo_logger)
-
-        with open(f"{config['out']}/config.yaml","w") as fl:
-            json.dump(config,fl)
-        with open(f"{config['out']}/info.txt","w") as fl:
-            #for retrocompatibility
-            json.dump({"algo": config["algo"]["name"], "num_envs": config["num_envs"] , "out": config["out"], "resume": config["resume"], "seed": config["seed"]},fl)
-
-
+        
+       
     elif config["algo"]["name"]=="sac":
 
-        N_ENVS = int(conifg["num_envs"])
+        N_ENVS = int(config["num_envs"])
         vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"]) for _ in range(N_ENVS)])
 
-        policy_kwargs = dict(net_arch=dict(pi=[64, 64], qf=[64, 64]))
+        #policy_kwargs = dict(net_arch=dict(
+        #    activation_fn=torch.nn.LeakyReLU,
+        #    pi=[config["hidden_sz"], config["hidden_sz"]],
+        #    qf=[config["hidden_sz"], config["hidden_sz"]]))
 
-        normal_noise=NormalActionNoise(np.zeros(3),np.ones(3))
+        normal_noise=NormalActionNoise(np.zeros(3),np.ones(3)*float(config["algo"]["action_noise_sigma"]))
         vec_noise=VectorizedActionNoise(normal_noise,N_ENVS)
         if not config["resume"]:
             model = SAC("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
-                    learning_rate=1e-4,
-                    #ent_coef=0.1,#let's keep the auto one which is proportional to reward
-                    action_noise=vec_noise,
-                    policy_kwargs=policy_kwargs,
+                    learning_rate=float(config["algo"]["learning_rate"]),
+                    ent_coef="auto_0.1",
+                    #action_noise=vec_noise,
+                    #policy_kwargs=policy_kwargs,
                     device="cuda")
         else:
             model=SAC.load(config["resume"],device="cuda",env=vec_env)
 
-        total_timesteps=10e6
+        total_timesteps=5e6
     
     else:
         raise Exception("Unknown algo")
 
+
+    with open(f"{config['out']}/config.yaml","w") as fl:
+        json.dump(config,fl)
+    with open(f"{config['out']}/info.txt","w") as fl:
+        #for retrocompatibility
+        json.dump({"algo": config["algo"]["name"], "num_envs": config["num_envs"] , "out": config["out"], "resume": config["resume"], "seed": config["seed"]},fl)
+
+
+    logger_path= f"{config['out']}/"
+    logger= configure(logger_path, ["stdout", "csv"])
+    model.set_logger(logger)
 
     callback = CallbackList([
         ReturnLoggingCallback(N_ENVS,log_dir=f"{config['out']}/"),
         CheckpointCallback(
             save_freq=1000,               
             save_path=f"{config['out']}/checkpoints/", 
-            name_prefix="ppo_agent"     
+            name_prefix=f"{config['algo']['name']}_agent"     
             )
         ])
 

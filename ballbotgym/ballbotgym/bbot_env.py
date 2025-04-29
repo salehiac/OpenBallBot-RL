@@ -293,7 +293,8 @@ class BBotSimulation(gym.Env):
                 obs={"orientation":rot_vec, "angular_vel": angular_vel, "goal":self.goal_2d, "vel":vel}
             else:
                 raise Exception("this is not handled yet")
-      
+     
+        #print("obs==",obs)
         return obs
     
     def _get_info(self):
@@ -314,6 +315,7 @@ class BBotSimulation(gym.Env):
             self.reset()
 
         ctrl=omniwheel_commands*10
+        #print("ctrl==",ctrl)
         ctrl=np.clip(ctrl,a_min=-10,a_max=10)#in case of pid issues
         
         self.data.ctrl[:] = - ctrl
@@ -331,7 +333,7 @@ class BBotSimulation(gym.Env):
         truncated=False
 
         reward=self.reward_obj(obs)#note that failure penalties are added later
-        reward/=100#normalization to get better gradients
+        reward= reward/1000 if self.goal_type=="directional" else reward/100 #normalization to get better gradients
      
         if self.passive_viewer:
 
