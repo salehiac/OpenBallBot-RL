@@ -12,6 +12,7 @@ import os
 import cv2
 import string
 import re
+from functools import reduce
 
 from termcolor import colored
 from scipy.linalg import logm
@@ -20,7 +21,6 @@ import mujoco
 import mujoco.viewer
 
 from . import Rewards
-
 
 class RGBDInputs:
 
@@ -118,36 +118,65 @@ class BBotSimulation(gym.Env):
         """
         super().__init__()
 
+        print(xml_path,
+                goal_type,
+                GUI,
+                renderer,
+                apply_random_force_at_init,
+                im_shape,
+                test_only,disable_cameras)
+
+
 
         self.xml_path= xml_path
         self.goal_type=goal_type
+        self.max_ep_steps=2500
+        self.apply_random_force_at_init=apply_random_force_at_init
+
         if goal_type=="fixed":
+           
+
+            self.model=mujoco.MjModel.from_xml_path(self.xml_path)
+
             self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
                                                          #the robot in the desired direction so that the relative goal remains the same. 
             assert self.goal_2d[0]==0.0, "fixed goal should be on the world x axis" 
             self.reward_obj=Rewards.FixedReward(self.goal_2d[1])
-            self.reward_obj.plot_reward()
-
-            self.apply_random_force_at_init=apply_random_force_at_init
-            self.max_ep_steps=5000
-
-            self.model=mujoco.MjModel.from_xml_path(self.xml_path)
+            #self.reward_obj.plot_reward()
 
         elif goal_type=="directional":
 
+            #we change the xml and replace the fixed goal with a random direction (sampled on the unit circle)
             with open(self.xml_path, "r") as fl:
                 
+                
+                def sample_direction_uniform(num=1):
+
+                    t=np.random.rand(num).reshape(num,1)*2*np.pi
+                    return np.concatenate([np.cos(t),np.sin(t)],1)
+
+                self.goal_2d=sample_direction_uniform(num=1).reshape(2)
+
                 xml_string = fl.read()
-                xml_string_after = re.sub(r'^.*name="goal".*\n?', '<new line content>\n', xml_string, flags=re.MULTILINE)
+                factor=10.0#just for display
+                xml_string_modified = re.sub(r'^.*name="goal".*\n?', 
+                        f'    <geom name="goal" type="capsule" fromto="0 0 0 {self.goal_2d[0]*factor} {self.goal_2d[1]*factor} 0" size="0.005" rgba="1 0 1 1" contype="0" conaffinity="0"/>\n',
+                        xml_string,
+                        flags=re.MULTILINE)
 
+                xml_dir=reduce(lambda x,y: x+"/"+y,self.xml_path.split("/")[:-1],"")
+                xml_string_modified = re.sub(
+                        r'<compiler[^>]*meshdir="[^"]*"[^>]*texturedir="[^"]*"[^>]*/>',
+                        f'<compiler meshdir="{xml_dir}/stl_files/" texturedir="{xml_dir}/textures"/>', 
+                        xml_string_modified)
 
+                #with open("/tmp/garbage_1.xml","w") as ff:
+                #    ff.write(xml_string_modified)
+                #pdb.set_trace()
 
-                with open("/tmp/garbage_1.xml","w") as ff:
-                    ff.write(xml_string_after)
-                pdb.set_trace()
+                self.model = mujoco.MjModel.from_xml_string(xml_string_modified)
 
-
-                model = mujoco.MjModel.from_xml_string(xml_string)
+                self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
 
         elif goal_type=="stop":
             
@@ -322,8 +351,7 @@ class BBotSimulation(gym.Env):
         terminated=False
         truncated=False
 
-        #dist_to_goal=np.linalg.norm(self.goal_2d-obs["pos"][:-1])
-        reward=self.reward_obj(obs["pos"][:-1])
+        reward=self.reward_obj(obs)#note that failure penalties are added later
         reward/=100#normalization to get better gradients
      
         if self.passive_viewer:
@@ -417,7 +445,6 @@ if __name__=="__main__":
 
     _parser = argparse.ArgumentParser(description="bbotgym test")
     _parser.add_argument("--xml_path", type=str)
-    _parser.add_argument("--max_steps", type=int, default=5000)
     _parser.add_argument("--gui", action="store_true")
 
     _args = _parser.parse_args()

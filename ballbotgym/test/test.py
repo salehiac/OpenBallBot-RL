@@ -21,6 +21,7 @@ def main(args):
             GUI=True,
             goal_type=args.goal_type,
             apply_random_force_at_init=True,
+            disable_cameras=True,
             test_only=False)
     
     obs, _=env.reset()
@@ -32,10 +33,11 @@ def main(args):
             break
     
         #pdb.set_trace()
-        cv2.imwrite(log_dir+f"/{step_i}_rgb_0.png",   255*cv2.merge(cv2.split(obs["rgbd_0"][:,:,:3])[::-1]))
-        cv2.imwrite(log_dir+f"/{step_i}_depth_0.png", 255*obs["rgbd_0"][:,:,3])
-        cv2.imwrite(log_dir+f"/{step_i}_rgb_1.png",   255*cv2.merge(cv2.split(obs["rgbd_1"][:,:,:3])[::-1]))
-        cv2.imwrite(log_dir+f"/{step_i}_depth_1.png", 255*obs["rgbd_1"][:,:,3])
+        if not env.env.env.disable_cameras:
+            cv2.imwrite(log_dir+f"/{step_i}_rgb_0.png",   255*cv2.merge(cv2.split(obs["rgbd_0"][:,:,:3])[::-1]))
+            cv2.imwrite(log_dir+f"/{step_i}_depth_0.png", 255*obs["rgbd_0"][:,:,3])
+            cv2.imwrite(log_dir+f"/{step_i}_rgb_1.png",   255*cv2.merge(cv2.split(obs["rgbd_1"][:,:,:3])[::-1]))
+            cv2.imwrite(log_dir+f"/{step_i}_depth_1.png", 255*obs["rgbd_1"][:,:,3])
     
     env.close()
     

@@ -15,7 +15,7 @@ from utils import make_ballbot_env
 def main(args):
 
 
-    env=make_ballbot_env(gui=True,render_to_logs=True,test_only=True)()
+    env=make_ballbot_env(gui=True,render_to_logs=True,test_only=True,goal_type=args.goal_type)()
 
     if args.algo=="ppo":
         model = PPO.load(args.path)
@@ -49,6 +49,7 @@ if __name__=="__main__":
 
     _parser = argparse.ArgumentParser(description="Test a policy.")
     _parser.add_argument("--algo", type=str,help="choices are ppo, ...")
+    _parser.add_argument("--goal_type", type=str, help="either diretional, fixed or stop",required=True)
     _parser.add_argument("--path", type=str,help="path to policy")
 
     _args = _parser.parse_args()

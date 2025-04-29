@@ -49,3 +49,4 @@ export MUJOCO_PATH=/PATH/TO/MUJOCO \
 export MUJOCO_PLUGIN_PATH=/PATH/TO/MUJOCO_PLUGIN \
 pip install mujoco-x.y.z.tar.gz
 
+6. NOTE: If you're using conda, you'll need `conda install -c conda-forge libstdcxx` to avoid some gxx related issues

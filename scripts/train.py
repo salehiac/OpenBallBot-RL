@@ -6,6 +6,7 @@ import torch
 import random
 import argparse
 
+import yaml
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
@@ -55,60 +56,63 @@ class ReturnLoggingCallback(BaseCallback):
         return True
 
 
-def main(args):
+def main(config):
 
 
         
-    #policy_kwargs = dict(activation_fn=torch.nn.Tanh,
-    policy_kwargs = dict(activation_fn=torch.nn.LeakyReLU,
-            net_arch=dict(pi=[512, 512], vf=[512, 512]))
+    policy_kwargs = dict(
+            activation_fn=torch.nn.LeakyReLU,
+            net_arch=dict(
+                pi=[config["hidden_sz"], config["hidden_sz"]],
+                vf=[config["hidden_sz"], config["hidden_sz"]]))
 
 
-    if args.algo=="ppo":
+    if config["algo"]["name"]=="ppo":
 
-        N_ENVS = args.num_envs
-        vec_env = SubprocVecEnv([make_ballbot_env(goal_type="fixed") for _ in range(N_ENVS)])
+        N_ENVS = int(config["num_envs"])
 
-       
-               
+        vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"]) for _ in range(N_ENVS)])
+
         #device is set to cpu because from the documentation, stabe_baseline_3's PPO is meant to run on cpu
-        if not args.resume:
+        if not config["resume"]:
             model = PPO("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
-                    ent_coef=0.02,
+                    ent_coef=float(config["algo"]["ent_coef"]),
                     device="cpu",
-                    clip_range=0.1,#default is 0.2
-                    vf_coef=0.5,#default i 0.5
-                    learning_rate=5e-5,
+                    clip_range=float(config["algo"]["clip_range"]),
+                    vf_coef=float(config["algo"]["vf_coef"]),
+                    learning_rate=float(config["algo"]["learning_rate"]),
                     policy_kwargs=policy_kwargs,
-                    n_steps=2000)#n_steps means n_steps per env before update
+                    n_steps=int(config["algo"]["n_steps"]))
         else:
-            model=PPO.load(args.resume,device="cpu",env=vec_env)
-
+            model=PPO.load(config["resume"],device="cpu",env=vec_env)
 
         #pdb.set_trace()
         
         total_timesteps=5e6
 
-        ppo_log_path= f"{args.out}/"
+        ppo_log_path= f"{config['out']}/"
         ppo_logger= configure(ppo_log_path, ["stdout", "csv"])
         model.set_logger(ppo_logger)
 
-        with open(f"{args.out}/info.txt","w") as fl:
-            json.dump(args.__dict__,fl)
+        with open(f"{config['out']}/config.yaml","w") as fl:
+            json.dump(config,fl)
+        with open(f"{config['out']}/info.txt","w") as fl:
+            #for retrocompatibility
+            json.dump({"algo": config["algo"], "num_envs": config["num_envs"] , "out": config["out"], "resume": config["resume"], "seed": config["seed"]},fl)
 
 
-    elif args.algo=="sac":
+    elif config["algo"]["name"]=="sac":
 
-        N_ENVS = args.num_envs
-        vec_env = SubprocVecEnv([make_ballbot_env(goal_type="fixed") for _ in range(N_ENVS)])
+        N_ENVS = int(conifg["num_envs"])
+        vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"]) for _ in range(N_ENVS)])
 
         policy_kwargs = dict(net_arch=dict(pi=[64, 64], qf=[64, 64]))
 
         normal_noise=NormalActionNoise(np.zeros(3),np.ones(3))
         vec_noise=VectorizedActionNoise(normal_noise,N_ENVS)
-        if not args.resume:
+        if not config["resume"]:
             model = SAC("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
@@ -118,7 +122,7 @@ def main(args):
                     policy_kwargs=policy_kwargs,
                     device="cuda")
         else:
-            model=SAC.load(args.resume,device="cuda",env=vec_env)
+            model=SAC.load(config["resume"],device="cuda",env=vec_env)
 
         total_timesteps=10e6
     
@@ -127,39 +131,33 @@ def main(args):
 
 
     callback = CallbackList([
-        ReturnLoggingCallback(N_ENVS,log_dir=f"{args.out}/"),
+        ReturnLoggingCallback(N_ENVS,log_dir=f"{config['out']}/"),
         CheckpointCallback(
             save_freq=1000,               
-            save_path=f"{args.out}/checkpoints/", 
+            save_path=f"{config['out']}/checkpoints/", 
             name_prefix="ppo_agent"     
             )
         ])
 
     model.learn(total_timesteps=total_timesteps,callback=callback)
         
-    model.save(f"{args.out}/final_{args.algo}_agent")
+    model.save(f"{config['out']}/final_{config['algo']}_agent")
     vec_env.close()
-
-
-
- 
 
 if __name__=="__main__":
 
 
-       
     _parser = argparse.ArgumentParser(description="Train a policy.")
-    _parser.add_argument("--algo", type=str,help="choices are ppo, ...",required=True)#algorithm params are hardcoded for ballbot
-    _parser.add_argument("--num_envs", type=int, default=16)
-    _parser.add_argument("--out", type=str, default="./log/", help="output path")
-    _parser.add_argument("--resume", type=str, help="path to model",default="")
-    _parser.add_argument("--seed", type=int, help="For repeatability/debug. Passing -1 (which is default) disables this. Args used in paper are 0,127,45,31,871",default=-1)
+    _parser.add_argument("--config", help="your yaml config file", required=True)
 
     _args = _parser.parse_args()
 
-    repeatable=True if _args.seed!=-1 else False
+    with open(_args.config, "r") as f:
+        _config = yaml.safe_load(f)
+
+    repeatable=True if int(_config["seed"])!=-1 else False
     if repeatable:
-        _seed = _args.seed
+        _seed = int(_config["seed"])
         random.seed(_seed)
         np.random.seed(_seed)
         torch.manual_seed(_seed)
@@ -173,6 +171,6 @@ if __name__=="__main__":
         from stable_baselines3.common.utils import set_random_seed
         set_random_seed(_seed)
     
-    main(_args)
+    main(_config)
 
    
