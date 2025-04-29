@@ -24,23 +24,25 @@ def main(args):
     else:
         raise Exception("unknown algo")
 
-    obs, _ = env.reset()
-    done = False
-       
-    G_tau=0
-    gamma=0.99999
-    count=0
-    while not done:
-        action, _ = model.predict(obs, deterministic=True)  # Use deterministic policy for testing
-        print(action)
-        obs, reward, done, truncated, info = env.step(action)
+    for test_i in range(args.n_test):
+        obs, _ = env.reset()
+        done = False
+           
+        G_tau=0
+        gamma=0.99999
+        count=0
+        while not done:
+            action, _ = model.predict(obs, deterministic=True)  # Use deterministic policy for testing
+            print(action)
+            obs, reward, done, truncated, info = env.step(action)
 
-        G_tau+=gamma**count*reward
-        count+=1
-        print(f'step={count}')
+            G_tau+=gamma**count*reward
+            count+=1
+            print(f'step={count}')
 
 
-    print("G_tau==",G_tau) 
+        print("G_tau==",G_tau) 
+
     env.close()
     
     return model
@@ -51,6 +53,7 @@ if __name__=="__main__":
     _parser.add_argument("--algo", type=str,help="choices are ppo, ...")
     _parser.add_argument("--goal_type", type=str, help="either diretional, fixed or stop",required=True)
     _parser.add_argument("--path", type=str,help="path to policy")
+    _parser.add_argument("--n_test", type=int,help="How many times to test policy",default=1)
 
     _args = _parser.parse_args()
     _model=main(_args)

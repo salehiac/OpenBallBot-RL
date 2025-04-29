@@ -7,7 +7,7 @@ algo:
   n_steps: 2000 #n_steps means n_steps per env before update
 goal_type: directional 
 hidden_sz: 512
-num_envs: 1
+num_envs: 8
 resume: ""
 out: ./log
 seed: 0

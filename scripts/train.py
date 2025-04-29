@@ -100,7 +100,7 @@ def main(config):
             json.dump(config,fl)
         with open(f"{config['out']}/info.txt","w") as fl:
             #for retrocompatibility
-            json.dump({"algo": config["algo"], "num_envs": config["num_envs"] , "out": config["out"], "resume": config["resume"], "seed": config["seed"]},fl)
+            json.dump({"algo": config["algo"]["name"], "num_envs": config["num_envs"] , "out": config["out"], "resume": config["resume"], "seed": config["seed"]},fl)
 
 
     elif config["algo"]["name"]=="sac":

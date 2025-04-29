@@ -411,9 +411,11 @@ class BBotSimulation(gym.Env):
             print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
 
             if self.test_only:
-                import matplotlib.pyplot as plt
-                plt.plot(self.reward_hist,"b")
-                plt.show()
+                #remove this?
+                pass
+                #import matplotlib.pyplot as plt
+                #plt.plot(self.reward_hist,"b")
+                #plt.show()
 
 
         if self.test_only:
