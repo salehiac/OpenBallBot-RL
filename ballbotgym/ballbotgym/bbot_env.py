@@ -118,65 +118,43 @@ class BBotSimulation(gym.Env):
         """
         super().__init__()
 
-        print(xml_path,
-                goal_type,
-                GUI,
-                renderer,
-                apply_random_force_at_init,
-                im_shape,
-                test_only,disable_cameras)
-
-
-
         self.xml_path= xml_path
         self.goal_type=goal_type
         self.max_ep_steps=2500
         self.apply_random_force_at_init=apply_random_force_at_init
 
-        if goal_type=="fixed":
-           
+        self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
+        if goal_type=="fixed":#uses position
 
-            self.model=mujoco.MjModel.from_xml_path(self.xml_path)
+            self.observation_space=gym.spaces.Dict({
+                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
+                "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
+                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                }) if not disable_cameras else gym.spaces.Dict({
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
+                    "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                    })
 
-            self.goal_2d=self.model.geom("goal").pos[:-1]#goal to reach in the 2d plane. It is fixed in world coordinates, because we can learn a policy that pivots
-                                                         #the robot in the desired direction so that the relative goal remains the same. 
-            assert self.goal_2d[0]==0.0, "fixed goal should be on the world x axis" 
-            self.reward_obj=Rewards.FixedReward(self.goal_2d[1])
-            #self.reward_obj.plot_reward()
+        elif goal_type=="directional":#no position, goal conditioned instead
 
-        elif goal_type=="directional":
-
-            #we change the xml and replace the fixed goal with a random direction (sampled on the unit circle)
-            with open(self.xml_path, "r") as fl:
-                
-                
-                def sample_direction_uniform(num=1):
-
-                    t=np.random.rand(num).reshape(num,1)*2*np.pi
-                    return np.concatenate([np.cos(t),np.sin(t)],1)
-
-                self.goal_2d=sample_direction_uniform(num=1).reshape(2)
-
-                xml_string = fl.read()
-                factor=10.0#just for display
-                xml_string_modified = re.sub(r'^.*name="goal".*\n?', 
-                        f'    <geom name="goal" type="capsule" fromto="0 0 0 {self.goal_2d[0]*factor} {self.goal_2d[1]*factor} 0" size="0.005" rgba="1 0 1 1" contype="0" conaffinity="0"/>\n',
-                        xml_string,
-                        flags=re.MULTILINE)
-
-                xml_dir=reduce(lambda x,y: x+"/"+y,self.xml_path.split("/")[:-1],"")
-                xml_string_modified = re.sub(
-                        r'<compiler[^>]*meshdir="[^"]*"[^>]*texturedir="[^"]*"[^>]*/>',
-                        f'<compiler meshdir="{xml_dir}/stl_files/" texturedir="{xml_dir}/textures"/>', 
-                        xml_string_modified)
-
-                #with open("/tmp/garbage_1.xml","w") as ff:
-                #    ff.write(xml_string_modified)
-                #pdb.set_trace()
-
-                self.model = mujoco.MjModel.from_xml_string(xml_string_modified)
-
-                self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
+            self.observation_space=gym.spaces.Dict({
+                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
+                "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=np.float64),
+                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                }) if not disable_cameras else gym.spaces.Dict({
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
+                    "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=np.float64),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                    })
 
         elif goal_type=="stop":
             
@@ -184,6 +162,7 @@ class BBotSimulation(gym.Env):
         else: 
             raise Exception("unknown goal type {goal_type}")
 
+        self.model=mujoco.MjModel.from_xml_path(self.xml_path)
         self.data = mujoco.MjData(self.model)
 
         self.rgbd_inputs=None
@@ -194,22 +173,6 @@ class BBotSimulation(gym.Env):
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
         self.scene_renderer=SceneRenderer(self.model) if renderer else None
 
-        self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
-        self.observation_space=gym.spaces.Dict({
-            "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-            "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-            "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
-            "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
-            "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
-            "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
-            }) if not disable_cameras else gym.spaces.Dict({
-                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
-                "vel": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
-                })
-
-        
         self.num_resets=0
 
         rand_str=''.join(np.random.permutation(list(string.ascii_letters + string.digits))[:12])
@@ -224,6 +187,28 @@ class BBotSimulation(gym.Env):
     def opt_timestep(self):
         return self.model.opt.timestep
 
+    def _reset_goal_and_reward_objs(self):
+        
+        if self.goal_type=="directional":
+                
+            self.goal_2d=sample_direction_uniform(num=1).reshape(2)
+            self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
+
+        elif self.goal_type=="fixed":
+
+            #we can learn a policy that pivots the robot in the desired direction so that the relative goal remains the same, hence the possibility of a fixed reward 
+            self.goal_2d=[0.0, 0.5]
+            self.reward_obj=Rewards.FixedReward(self.goal_2d[1])
+            #self.reward_obj.plot_reward()
+
+        else:
+            raise Exception("unknown goal type")
+
+
+        if self.test_only:
+            self.reward_hist=[]
+
+        print("goal_2d==",self.goal_2d)
 
     def reset(self,seed=None,goal:str="random",**kwargs):
 
@@ -231,9 +216,10 @@ class BBotSimulation(gym.Env):
 
         super().reset(seed=seed)
 
+        self._reset_goal_and_reward_objs()
+
         self.step_counter=0
         self.prev_data_time=0
-        
        
         mujoco.mj_resetData(self.model, self.data)
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
@@ -261,9 +247,6 @@ class BBotSimulation(gym.Env):
        
         self.num_resets+=1
 
-        if self.test_only:
-            self.pos_hist=[]
-            self.reward_hist=[]
         return obs, info
 
     def _get_obs(self):
@@ -298,23 +281,19 @@ class BBotSimulation(gym.Env):
             angular_vel=np.zeros_like(rot_vec)
         self.prev_orientation=orientation
 
-        if self.disable_cameras:
-            obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel}
-        else:
-            obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
-        #print("obs==\n",obs)
-       
-        if 0:
-            for k in self.max_abs_obs.keys():
+        if self.goal_type=="fixed":
+            if self.disable_cameras:
+                obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel}
+            else:
+                obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
 
-                self.max_abs_obs[k]=max(self.max_abs_obs[k],abs(obs[k]).max())
-                if self.max_abs_obs[k]>2.0:
-                    print(colored(f"value of {k} is {self.max_abs_obs[k]}","red"))
-                elif self.max_abs_obs[k]>5:
-                    print(colored(f"******************************* value of {k} is {self.max_abs_obs[k]}","red",attrs=["bold"]))
+        elif self.goal_type=="directional":
 
-            #print(self.max_abs_obs)
-        #print(obs)
+            if self.disable_cameras:
+                obs={"orientation":rot_vec, "angular_vel": angular_vel, "goal":self.goal_2d, "vel":vel}
+            else:
+                raise Exception("this is not handled yet")
+      
         return obs
     
     def _get_info(self):
@@ -355,6 +334,46 @@ class BBotSimulation(gym.Env):
         reward/=100#normalization to get better gradients
      
         if self.passive_viewer:
+
+             
+            with self.passive_viewer.lock():
+
+                if self.goal_type=="directional":
+                    self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
+                    factor=20#just for display
+                    mujoco.mjv_initGeom(
+                            self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
+                            type=mujoco.mjtGeom.mjGEOM_SPHERE,
+                            size=[0.1]*3,
+                            pos=[self.goal_2d[0]*factor,self.goal_2d[1]*factor,0.0],
+                            mat=np.eye(3).flatten(),
+                            rgba=[1, 0, 1, 1])
+
+                    mujoco.mjv_connector(
+                            self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
+                            type=mujoco.mjtGeom.mjGEOM_LINE,
+                            width=200,
+                            from_=[0,0,0],
+                            to=[self.goal_2d[0]*factor,self.goal_2d[1]*factor,0])
+                elif self.goal_type=="fixed":
+                    self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
+                    mujoco.mjv_initGeom(
+                            self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
+                            type=mujoco.mjtGeom.mjGEOM_SPHERE,
+                            size=[0.01]*3,
+                            pos=[self.goal_2d[0],self.goal_2d[1],0.0],
+                            mat=np.eye(3).flatten(),
+                            rgba=[1, 0, 1, 1])
+
+                    mujoco.mjv_connector(
+                            self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
+                            type=mujoco.mjtGeom.mjGEOM_LINE,
+                            width=10,
+                            from_=[self.goal_2d[0],self.goal_2d[1],0],
+                            to=[self.goal_2d[0],self.goal_2d[1],0.8])
+ 
+
+
             self.passive_viewer.sync()
 
         self.prev_data_time=self.data.time#to detect resets that happen in GUI
@@ -373,7 +392,7 @@ class BBotSimulation(gym.Env):
        
         max_allowed_tilt=20
         early_fail_penalty=0.0
-        if angle_in_degrees>max_allowed_tilt or obs["pos"][-1]<0.1:#if the robot is too tilted or if it has fallen (e.g. out of the bounds of the plane)
+        if angle_in_degrees>max_allowed_tilt:
             print(f"failure after {self.step_counter}. Reason: tilte_angle > {max_allowed_tilt} ")
 
             info["success"]=False
@@ -393,15 +412,11 @@ class BBotSimulation(gym.Env):
 
             if self.test_only:
                 import matplotlib.pyplot as plt
-                aa=np.concatenate([np.array(x).reshape(1,2) for x in self.pos_hist],0)
-                plt.plot(aa[:,0],aa[:,1],"r*")
-                plt.show()
                 plt.plot(self.reward_hist,"b")
                 plt.show()
 
 
         if self.test_only:
-            self.pos_hist.append(obs["pos"][:-1])
             self.reward_hist.append(reward)
 
 
@@ -418,8 +433,17 @@ class BBotSimulation(gym.Env):
         if self.passive_viewer:
             self.passive_viewer.close()
 
+        #this just freezes for some reason
+        #if glfw.get_current_context() is not None:
+        #    glfw.terminate()
+
         del self.model
         del self.data
+
+def sample_direction_uniform(num=1):
+
+    t=np.random.rand(num).reshape(num,1)*2*np.pi
+    return np.concatenate([np.cos(t),np.sin(t)],1)
 
 
 
