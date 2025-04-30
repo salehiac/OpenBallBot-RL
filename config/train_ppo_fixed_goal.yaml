@@ -5,7 +5,7 @@ algo:
   vf_coef: 0.5
   learning_rate: 5e-5
   n_steps: 2000 #n_steps means n_steps per env before update
-goal_type: fixed
+goal_type: fixed_pos
 hidden_sz: 512
 num_envs: 16
 resume: ""

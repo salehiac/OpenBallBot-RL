@@ -7,12 +7,13 @@ import gymnasium as gym
 
 import ballbotgym
 
-def make_ballbot_env(gui=False,
-        goal_type="directional",
+def make_ballbot_env(
+        goal_type,
+        gui=False,
         render_to_logs=False,
         test_only=False):
     """
-    goal_type can be 'fixed', 'directional', 'stop'
+    goal_type can be 'fixed_pos', 'fixed_dir', 'rand_dir', 'rand_pos', 'stop'
     """
     def _init():
         env=gym.make(

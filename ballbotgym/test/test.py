@@ -47,7 +47,7 @@ def main(args):
 if __name__=="__main__":
 
     _parser = argparse.ArgumentParser(description="test bbot env")
-    _parser.add_argument('--goal_type', type=str, help="goal_type can either be directional, fixed or stop", default="directional")
+    _parser.add_argument('--goal_type', type=str, help="goal_type can either be fixed_pos, fixed_dir, rand_pos, rand_dir or stop", default="rand_dir")
 
     _args = _parser.parse_args()
 

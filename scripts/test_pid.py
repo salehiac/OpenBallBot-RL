@@ -28,8 +28,8 @@ if __name__=="__main__":
             GUI=True,#full mujoco GUI
             renderer=True,#renders to log
             apply_random_force_at_init=True,
-            goal_type="directional",#unusued for pid
-            #goal_type="fixed",#unusued for pid
+            goal_type="rand_dir",#unusued for pid
+            #goal_type="fixed_pos",#unusued for pid
             disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
     
     k_vals=[20,5,2]

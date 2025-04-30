@@ -51,7 +51,7 @@ if __name__=="__main__":
 
     _parser = argparse.ArgumentParser(description="Test a policy.")
     _parser.add_argument("--algo", type=str,help="choices are ppo, ...")
-    _parser.add_argument("--goal_type", type=str, help="either diretional, fixed or stop",required=True)
+    _parser.add_argument("--goal_type", type=str, help="either rand_dir, rand_pos, fixed_pos, fixed_dir or stop",required=True)
     _parser.add_argument("--path", type=str,help="path to policy")
     _parser.add_argument("--n_test", type=int,help="How many times to test policy",default=1)
 
