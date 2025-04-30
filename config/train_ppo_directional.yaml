@@ -3,7 +3,8 @@ algo:
   ent_coef: 0.02
   clip_range: 0.1
   vf_coef: 0.5
-  learning_rate: 5e-5
+  #learning_rate: 5e-5
+  learning_rate: -1 #this turns on scheduler
   n_steps: 2000 #n_steps means n_steps per env before update
 #goal_type: rand_dir 
 goal_type: fixed_dir

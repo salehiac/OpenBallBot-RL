@@ -452,7 +452,6 @@ class BBotSimulation(gym.Env):
             self.reward_hist.append(reward)
 
 
-        #print("reward==",reward)
         return obs, reward, terminated, truncated, info
 
 

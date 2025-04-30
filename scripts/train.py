@@ -30,7 +30,8 @@ class ReturnLoggingCallback(BaseCallback):
         self.num_steps_total=0
         self.steps_report=[]
 
-        self.log_path=log_dir+"/G_tau_lst"
+        self.log_dir=log_dir
+        self.best_mean_rew=-float("inf")
 
     def _on_step(self):
 
@@ -50,10 +51,25 @@ class ReturnLoggingCallback(BaseCallback):
             self.returns_report.append(avg_ret)
             self.steps_report.append(self.num_steps_total)
 
-        with open(self.log_path,"w") as fl:
+        with open(self.log_dir+"/G_tau_lst","w") as fl:
             json.dump({"avg_returns":self.returns_report,"total_steps":self.steps_report},fl)
 
         return True
+
+    def _on_rollout_end(self):
+
+        rb=self.locals["rollout_buffer"]
+        mean_reward=rb.rewards.mean()#bb.rewards is of shame n_steps*num_envs for ppo
+
+        if mean_reward > self.best_mean_rew:
+                self.best_mean_rew= mean_reward
+                self.model.save(self.log_dir+"/best_agent")
+
+
+def lr_schedule(progress_remaining):
+
+    # progress_remaining goes from 1 (beginning) to 0 (end)
+    return 5e-5 * progress_remaining
 
 
 def main(config):
@@ -83,7 +99,7 @@ def main(config):
                     device="cpu",
                     clip_range=float(config["algo"]["clip_range"]),
                     vf_coef=float(config["algo"]["vf_coef"]),
-                    learning_rate=float(config["algo"]["learning_rate"]),
+                    learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
                     policy_kwargs=policy_kwargs,
                     n_steps=int(config["algo"]["n_steps"]))
         else:
@@ -147,7 +163,6 @@ def main(config):
 
     model.learn(total_timesteps=total_timesteps,callback=callback)
         
-    model.save(f"{config['out']}/final_{config['algo']}_agent")
     vec_env.close()
 
 if __name__=="__main__":
