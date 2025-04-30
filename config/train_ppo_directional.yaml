@@ -1,13 +1,13 @@
 algo:
   name: ppo 
-  ent_coef: 0.02
+  ent_coef: 0.1
   clip_range: 0.1
   vf_coef: 0.5
   learning_rate: 5e-5
   n_steps: 2000 #n_steps means n_steps per env before update
 #goal_type: rand_dir 
 goal_type: fixed_dir
-hidden_sz: 512
+hidden_sz: 64
 num_envs: 8
 resume: ""
 out: ./log

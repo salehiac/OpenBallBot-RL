@@ -156,7 +156,21 @@ class BBotSimulation(gym.Env):
                     "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
                     })
 
-        elif goal_type=="stop":
+        elif goal_type=="fixed_dir":#no position, and no need for goal conditioning
+
+            self.observation_space=gym.spaces.Dict({
+                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
+                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                }) if not disable_cameras else gym.spaces.Dict({
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                    })
+
+        elif goal_type=="stop" or goal_type=="rand_pos": 
             
             raise Exception("not implemented yet")
         else: 
@@ -194,6 +208,11 @@ class BBotSimulation(gym.Env):
             self.goal_2d=sample_direction_uniform(num=1).reshape(2)
             self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
 
+        elif self.goal_type=="fixed_dir":
+
+            self.goal_2d=[0.0, 1.0]
+            self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
+        
         elif self.goal_type=="fixed_pos":
 
             #we can learn a policy that pivots the robot in the desired direction so that the relative goal remains the same, hence the possibility of a fixed reward 
@@ -293,6 +312,13 @@ class BBotSimulation(gym.Env):
                 obs={"orientation":rot_vec, "angular_vel": angular_vel, "goal":self.goal_2d, "vel":vel}
             else:
                 raise Exception("this is not handled yet")
+
+        elif self.goal_type=="fixed_dir":
+            
+            if self.disable_cameras:
+                obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel}
+            else:
+                raise Exception("this is not handled yet")
      
         #print("obs==",obs)
         return obs
@@ -333,14 +359,14 @@ class BBotSimulation(gym.Env):
         truncated=False
 
         reward=self.reward_obj(obs)#note that failure penalties are added later
-        reward= reward/1000 if self.goal_type=="rand_dir" else reward/100 #normalization to get better gradients
+        reward= reward/1000 if self.goal_type=="rand_dir" else reward/100 if self.goal_type=="fixed_dir" else reward/100 #normalization to get better gradients
      
         if self.passive_viewer:
 
              
             with self.passive_viewer.lock():
 
-                if self.goal_type=="rand_dir":
+                if self.goal_type in ["rand_dir", "fixed_dir"]:
                     self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
                     factor=20#just for display
                     mujoco.mjv_initGeom(
@@ -400,8 +426,10 @@ class BBotSimulation(gym.Env):
             info["success"]=False
             info["failure"]=True
             terminated=True
-            early_fail_penalty=-1.0
-            reward+=early_fail_penalty
+            #early_fail_penalty=-1.0
+            #reward+=early_fail_penalty
+        else:
+            reward+=0.01
 
         #print("step_counter==",self.step_counter)
         if terminated and self.scene_renderer is not None:

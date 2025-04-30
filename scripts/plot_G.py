@@ -6,7 +6,7 @@ with open(sys.argv[1],"r") as fl:
     Gs=json.load(fl)
 
 
-limit=int(sys.argv[2]) if len(sys.argv)==3 else -1
+limit=int(sys.argv[2]) if len(sys.argv)==3 else len(Gs["avg_returns"])
 
 if isinstance(Gs,dict):
     #plt.plot(Gs["total_steps"][:limit],Gs["avg_returns"][:limit])

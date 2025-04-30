@@ -30,14 +30,17 @@ class DirectionalReward(Reward):
 
         dir_rew=state["vel"][:-1].dot(self.target_direction)
 
-
         R_mat=quaternion.as_rotation_matrix(quaternion.from_rotation_vector(state["orientation"]))#local to global
-        robot_up_axis_local=np.array([0,0,1]).astype("float").reshape(3,1)
-        robot_up_axis_global_coords=R_mat.T@robot_up_axis_local
-        upright_rew=(np.array([0,0,1]).reshape(3,1).T@robot_up_axis_global_coords).item()
 
-        coef=0.7#should be in [0,1]
-        rew=(1-coef)*dir_rew+coef*upright_rew
+        #adding an "alive" bonus at each timestep seems to work better than having an upright bonus
+        #robot_up_axis_local=np.array([0,0,1]).astype("float").reshape(3,1)
+        #robot_up_axis_global_coords=R_mat.T@robot_up_axis_local
+        #upright_rew=(np.array([0,0,1]).reshape(3,1).T@robot_up_axis_global_coords).item()
+
+        #coef=0.7#should be in [0,1]
+        #rew=(1-coef)*dir_rew+coef*upright_rew
+
+        rew=dir_rew
         
         #print(f"dir_rew=={dir_rew},    upright_rew={upright_rew},    total_rew={rew}")
         return rew
