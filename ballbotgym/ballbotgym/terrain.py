@@ -1,6 +1,7 @@
 import pdb
 import numpy as np
 import quaternion
+import matplotlib.pyplot as plt
 
 import mujoco
 import mujoco.viewer
@@ -38,7 +39,11 @@ def generate_perlin_terrain(n,
 
     if flat_center_size:
         cc=terrain.shape[0]//2
-        terrain[cc-flat_center_size//2:cc+flat_center_size//2, cc-flat_center_size//2:cc+flat_center_size]=0.0
+        dd=flat_center_size//2
+        terrain[cc-dd:cc+dd,
+                cc-dd:cc+dd]=0.0
 
+    #plt.imshow(terrain)
+    #plt.show()
     
     return terrain.flatten()

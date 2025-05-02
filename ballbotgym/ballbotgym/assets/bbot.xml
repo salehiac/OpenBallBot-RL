@@ -16,7 +16,7 @@
     <texture name="basketball_tex" type="2d" file="basketball_texture.png"/>
     <material name="basketball_mat" texture="basketball_tex" shininess="0.2"/>
 
-    <hfield name="terrain" nrow="73" ncol="73" size="5 5 0.1 0.1" />
+    <hfield name="terrain" nrow="63" ncol="63" size="5 5 0.1 0.1" />
     <texture name="terrain_tex" type="2d" file="asphalt_texture.png"/>
     <material name="mat_terrain" texture="terrain_tex" shininess="0.4" />
   </asset>

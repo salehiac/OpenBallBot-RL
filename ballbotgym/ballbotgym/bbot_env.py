@@ -159,6 +159,7 @@ class BBotSimulation(gym.Env):
 
         elif goal_type=="fixed_dir":#no position, and no need for goal conditioning
 
+            self.window=3
             self.observation_space=gym.spaces.Dict({
                 "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
                 "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
@@ -166,10 +167,10 @@ class BBotSimulation(gym.Env):
                 "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
                 "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
                 }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
-                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=np.float64),
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3*self.window,), dtype=np.float64),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3*self.window,), dtype=np.float64),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3*self.window,), dtype=np.float64),
+                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3*self.window,),dtype=np.float64),
                     })
 
         elif goal_type=="stop" or goal_type=="rand_pos": 
@@ -250,7 +251,7 @@ class BBotSimulation(gym.Env):
    
         assert self.model.hfield_nrow.item()==self.model.hfield_ncol.item() and self.model.hfield_ncol.item()%2==1, "invalid hfield rows or cols" 
         self.model.hfield_data=terrain.generate_perlin_terrain(self.model.hfield_nrow.item(),
-                flat_center_size=3,
+                flat_center_size=5,
                 seed=np.random.randint(10000))
 
         if self.passive_viewer is not None:
@@ -269,6 +270,14 @@ class BBotSimulation(gym.Env):
         self.prev_pos=None
         self.prev_orientation=None
         self.prev_motor_state=None
+
+
+        #each of those will be of length (self.window-1)*relevant_dim, since the latest obs (of size relevant_dim) will be concatenated to it by _get_obs
+        self.obs_window={
+                "orientation": np.zeros((self.window-1)*3),
+                "angular_vel": np.zeros((self.window-1)*3),
+                "vel": np.zeros((self.window-1)*3),
+                "motor_state": np.zeros((self.window-1)*3)}
        
         obs=self._get_obs()
         info=self._get_info()
@@ -347,8 +356,16 @@ class BBotSimulation(gym.Env):
         elif self.goal_type=="fixed_dir":
             
             if self.disable_cameras:
-                #obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": np.hstack([motor_state, motor_acc])}
-                obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state}
+                obs_cur={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state}
+                assert self.window==3, "hardcoded for a size 3 sliding window"
+                for key in obs_cur.keys():
+                    dim=obs_cur[key].shape[0]
+                    obs_cur[key]=np.hstack([self.obs_window[key], obs_cur[key]])
+
+                    self.obs_window[key][:dim]=self.obs_window[key][dim:2*dim]
+                    self.obs_window[key][dim:2*dim]=obs_cur[key][2*dim:]
+
+                obs=obs_cur
             else:
                 raise Exception("this is not handled yet")
         #print("obs==",obs)
@@ -456,7 +473,7 @@ class BBotSimulation(gym.Env):
 
         #compute angle with upright vector
         gravity=np.array([0,0,-1.0]).astype("float").reshape(3,1)
-        gravity_local=(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"])).T @ (gravity)).reshape(3)
+        gravity_local=(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"][-3:])).T @ (gravity)).reshape(3)
 
         up_axis_local=np.array([0,0,1]).astype("float")
         angle_in_degrees=np.arccos(up_axis_local.dot(-gravity_local)).item()*180/np.pi

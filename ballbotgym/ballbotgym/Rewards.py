@@ -27,10 +27,9 @@ class DirectionalReward(Reward):
     def __call__(self, state):
 
 
+        dir_rew=state["vel"][-3:-1].dot(self.target_direction)
 
-        dir_rew=state["vel"][:-1].dot(self.target_direction)
-
-        R_mat=quaternion.as_rotation_matrix(quaternion.from_rotation_vector(state["orientation"]))#local to global
+        R_mat=quaternion.as_rotation_matrix(quaternion.from_rotation_vector(state["orientation"][-3:]))#local to global
 
         #adding an "alive" bonus at each timestep seems to work better than having an upright bonus
         #robot_up_axis_local=np.array([0,0,1]).astype("float").reshape(3,1)
