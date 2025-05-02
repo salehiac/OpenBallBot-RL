@@ -20,7 +20,8 @@ from scipy.linalg import logm
 import mujoco
 import mujoco.viewer
 
-from . import Rewards
+from . import Rewards, terrain
+
 
 class RGBDInputs:
 
@@ -120,7 +121,7 @@ class BBotSimulation(gym.Env):
 
         self.xml_path= xml_path
         self.goal_type=goal_type
-        self.max_ep_steps=2500
+        self.max_ep_steps=4000
         self.apply_random_force_at_init=apply_random_force_at_init
 
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
@@ -246,7 +247,15 @@ class BBotSimulation(gym.Env):
 
         self.step_counter=0
         self.prev_data_time=0
-       
+   
+        assert self.model.hfield_nrow.item()==self.model.hfield_ncol.item() and self.model.hfield_ncol.item()%2==1, "invalid hfield rows or cols" 
+        self.model.hfield_data=terrain.generate_perlin_terrain(self.model.hfield_nrow.item(),
+                flat_center_size=3,
+                seed=np.random.randint(10000))
+
+        if self.passive_viewer is not None:
+            self.passive_viewer.update_hfield(mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_HFIELD,"terrain"))
+
         mujoco.mj_resetData(self.model, self.data)
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
 
@@ -402,11 +411,12 @@ class BBotSimulation(gym.Env):
                 if self.goal_type in ["rand_dir", "fixed_dir"]:
                     self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
                     factor=20#just for display
+                    hh=0.5
                     mujoco.mjv_initGeom(
                             self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
                             type=mujoco.mjtGeom.mjGEOM_SPHERE,
                             size=[0.1]*3,
-                            pos=[self.goal_2d[0]*factor,self.goal_2d[1]*factor,0.0],
+                            pos=[self.goal_2d[0]*factor,self.goal_2d[1]*factor,hh],
                             mat=np.eye(3).flatten(),
                             rgba=[1, 0, 1, 1])
 
@@ -414,8 +424,8 @@ class BBotSimulation(gym.Env):
                             self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
                             type=mujoco.mjtGeom.mjGEOM_LINE,
                             width=200,
-                            from_=[0,0,0],
-                            to=[self.goal_2d[0]*factor,self.goal_2d[1]*factor,0])
+                            from_=[0,0,hh],
+                            to=[self.goal_2d[0]*factor,self.goal_2d[1]*factor,hh])
                 elif self.goal_type=="fixed_pos":
                     self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
                     mujoco.mjv_initGeom(
