@@ -32,7 +32,8 @@ if __name__=="__main__":
             #goal_type="fixed_pos",#unusued for pid
             disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
     
-    k_vals=[20,5,2]
+    #k_vals=[20,5,2] #works for 1khz
+    k_vals=[20,15,2] #better for 500hz, but not optimal
     pid=policies.PID(dt=env.env.env.opt_timestep,
             k_p=k_vals[0],
             k_i=k_vals[1],

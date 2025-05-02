@@ -168,6 +168,7 @@ class BBotSimulation(gym.Env):
                     "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
                     "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
                     "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=np.float64),
                     })
 
         elif goal_type=="stop" or goal_type=="rand_pos": 
@@ -196,6 +197,11 @@ class BBotSimulation(gym.Env):
         self.test_only=test_only
 
         self.max_abs_obs={x:-1 for x in ["orientation", "angular_vel", "vel", "pos"]}
+
+
+        self.reward_term_1_hist=[]#
+        self.reward_term_2_hist=[]
+        self.reward_term_3_hist=[]#constant for now
 
     @property
     def opt_timestep(self):
@@ -226,6 +232,7 @@ class BBotSimulation(gym.Env):
 
         if self.test_only:
             self.reward_hist=[]
+            self.action_hist=[]
 
         print("goal_2d==",self.goal_2d)
 
@@ -252,7 +259,8 @@ class BBotSimulation(gym.Env):
 
         self.prev_pos=None
         self.prev_orientation=None
-        
+        self.prev_motor_state=None
+       
         obs=self._get_obs()
         info=self._get_info()
 
@@ -265,6 +273,10 @@ class BBotSimulation(gym.Env):
         self.G_tau=0.0
        
         self.num_resets+=1
+
+        if len(self.reward_term_1_hist):
+            np.save(self.log_dir+"/term_1",np.array(self.reward_term_1_hist))
+            np.save(self.log_dir+"/term_2",np.array(self.reward_term_2_hist))
 
         return obs, info
 
@@ -280,10 +292,20 @@ class BBotSimulation(gym.Env):
         orientation = quaternion.quaternion(*self.data.xquat[body_id].copy())
         rot_vec=quaternion.as_rotation_vector(orientation).astype("float64")
 
+        
+        motor_state=np.array([self.data.qvel[self.model.joint(f"wheel_joint_{motor_idx}").id] for motor_idx in range(3)])
+        motor_state/=10#just to normalize
+        if any(np.abs(motor_state)>2):
+            print("WARNING!!!!!!!! =========================!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(motor_state)
+        motor_state=np.clip(motor_state,a_min=-2.0,a_max=2.0)
+        #motor_acc=(motor_state-self.prev_motor_state)/self.opt_timestep if self.prev_motor_state is not None else np.zeros_like(motor_state)
+        self.prev_motor_state=motor_state.copy()
+
         #compute velocity
         vel=(position-self.prev_pos)/self.opt_timestep if self.prev_pos is not None else np.zeros_like(position)
         vel=np.clip(vel,a_min=-2.0,a_max=2.0)
-        self.prev_pos=position
+        self.prev_pos=position.copy()
         #angular_vel=
 
         #compute angular velocity
@@ -298,7 +320,7 @@ class BBotSimulation(gym.Env):
             angular_vel=np.clip(vee(W)/self.opt_timestep,a_min=-2.0,a_max=2.0)
         else:
             angular_vel=np.zeros_like(rot_vec)
-        self.prev_orientation=orientation
+        self.prev_orientation=orientation.copy()
 
         if self.goal_type=="fixed_pos":
             if self.disable_cameras:
@@ -316,10 +338,10 @@ class BBotSimulation(gym.Env):
         elif self.goal_type=="fixed_dir":
             
             if self.disable_cameras:
-                obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel}
+                #obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": np.hstack([motor_state, motor_acc])}
+                obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state}
             else:
                 raise Exception("this is not handled yet")
-     
         #print("obs==",obs)
         return obs
     
@@ -339,11 +361,14 @@ class BBotSimulation(gym.Env):
         if self.data.time==0.0 and self.step_counter>0.0:#reset done in GUI
             print("RESET DUE TO RESET FROM GUI")
             self.reset()
-
+        
         ctrl=omniwheel_commands*10
         #print("ctrl==",ctrl)
         ctrl=np.clip(ctrl,a_min=-10,a_max=10)#in case of pid issues
-        
+
+        if self.test_only:
+            self.action_hist.append(ctrl.reshape(1,3))
+       
         self.data.ctrl[:] = - ctrl
         mujoco.mj_step(self.model, self.data)
         
@@ -360,6 +385,14 @@ class BBotSimulation(gym.Env):
 
         reward=self.reward_obj(obs)#note that failure penalties are added later
         reward= reward/1000 if self.goal_type=="rand_dir" else reward/100 if self.goal_type=="fixed_dir" else reward/100 #normalization to get better gradients
+
+        self.reward_term_1_hist.append(reward)
+        
+        #pdb.set_trace() 
+        action_regularization=-0.001*(np.linalg.norm(omniwheel_commands)**2)
+        #print(action_regularization)
+        self.reward_term_2_hist.append(action_regularization)
+        reward+=action_regularization
      
         if self.passive_viewer:
 
@@ -443,9 +476,17 @@ class BBotSimulation(gym.Env):
             if self.test_only:
                 #remove this?
                 pass
-                #import matplotlib.pyplot as plt
+                import matplotlib.pyplot as plt
+                aa=np.concatenate(self.action_hist,0)
+                plt.plot(aa[:,0],"r")
+                plt.plot(aa[:,1],"g")
+                plt.plot(aa[:,2],"b")
                 #plt.plot(self.reward_hist,"b")
-                #plt.show()
+                plt.show()
+
+                plt.plot(self.reward_term_1_hist,"r")
+                plt.plot(self.reward_term_2_hist,"g")
+                plt.show()
 
 
         if self.test_only:
