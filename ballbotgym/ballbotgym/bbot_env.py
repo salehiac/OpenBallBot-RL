@@ -503,17 +503,18 @@ class BBotSimulation(gym.Env):
             if self.test_only:
                 #remove this?
                 pass
-                import matplotlib.pyplot as plt
-                aa=np.concatenate(self.action_hist,0)
-                plt.plot(aa[:,0],"r")
-                plt.plot(aa[:,1],"g")
-                plt.plot(aa[:,2],"b")
-                #plt.plot(self.reward_hist,"b")
-                plt.show()
+                if 0:
+                    import matplotlib.pyplot as plt
+                    aa=np.concatenate(self.action_hist,0)
+                    plt.plot(aa[:,0],"r")
+                    plt.plot(aa[:,1],"g")
+                    plt.plot(aa[:,2],"b")
+                    #plt.plot(self.reward_hist,"b")
+                    plt.show()
 
-                plt.plot(self.reward_term_1_hist,"r")
-                plt.plot(self.reward_term_2_hist,"g")
-                plt.show()
+                    plt.plot(self.reward_term_1_hist,"r")
+                    plt.plot(self.reward_term_2_hist,"g")
+                    plt.show()
 
 
         if self.test_only:
