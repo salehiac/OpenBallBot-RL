@@ -171,6 +171,7 @@ class BBotSimulation(gym.Env):
                     "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3*self.window,), dtype=np.float64),
                     "vel": gym.spaces.Box(low=-2,high=2, shape=(3*self.window,), dtype=np.float64),
                     "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3*self.window,),dtype=np.float64),
+                    "actions": gym.spaces.Box(-1.0,1.0,shape=(3*self.window,),dtype=np.float64),
                     })
 
         elif goal_type=="stop" or goal_type=="rand_pos": 
@@ -277,9 +278,11 @@ class BBotSimulation(gym.Env):
                 "orientation": np.zeros((self.window-1)*3),
                 "angular_vel": np.zeros((self.window-1)*3),
                 "vel": np.zeros((self.window-1)*3),
-                "motor_state": np.zeros((self.window-1)*3)}
+                "motor_state": np.zeros((self.window-1)*3),
+                "actions": np.zeros((self.window-1)*3),
+                }
        
-        obs=self._get_obs()
+        obs=self._get_obs(np.zeros(3))
         info=self._get_info()
 
         if not self.disable_cameras:
@@ -298,7 +301,7 @@ class BBotSimulation(gym.Env):
 
         return obs, info
 
-    def _get_obs(self):
+    def _get_obs(self,last_ctrl):
 
         if not self.disable_cameras:
             rgbd_0=self.rgbd_inputs[0](self.data).astype("float64")
@@ -356,7 +359,7 @@ class BBotSimulation(gym.Env):
         elif self.goal_type=="fixed_dir":
             
             if self.disable_cameras:
-                obs_cur={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state}
+                obs_cur={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl}
                 assert self.window==3, "hardcoded for a size 3 sliding window"
                 for key in obs_cur.keys():
                     dim=obs_cur[key].shape[0]
@@ -404,7 +407,7 @@ class BBotSimulation(gym.Env):
         if self.scene_renderer is not None:
             self.scene_renderer(self.data)
 
-        obs=self._get_obs()
+        obs=self._get_obs(omniwheel_commands)
         info=self._get_info()
         terminated=False
         truncated=False
