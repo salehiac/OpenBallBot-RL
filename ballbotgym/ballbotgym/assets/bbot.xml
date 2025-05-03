@@ -16,7 +16,7 @@
     <texture name="basketball_tex" type="2d" file="basketball_texture.png"/>
     <material name="basketball_mat" texture="basketball_tex" shininess="0.2"/>
 
-    <hfield name="terrain" nrow="63" ncol="63" size="5 5 0.1 0.1" />
+    <hfield name="terrain" nrow="243" ncol="243" size="5 5 0.1 0.1" />
     <texture name="terrain_tex" type="2d" file="asphalt_texture.png"/>
     <material name="mat_terrain" texture="terrain_tex" shininess="0.4" />
   </asset>
@@ -36,7 +36,7 @@
     <geom name="terrain" type="hfield" hfield="terrain" size="5 5 0.1" pos="0 0 0" />
     
     <!-- Base body with a free joint -->
-    <body name="base" pos="0 0 0.22" euler="0 0 0">
+    <body name="base" pos="0 0 0.24" euler="0 0 0">
     
       <freejoint />
       <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
@@ -81,7 +81,7 @@
 
     </body>
 
-    <body name="ball" pos="0 0.0 0.24">
+    <body name="ball" pos="0 0.0 0.26">
       <freejoint />
       <!--the basketball should be around 0.6kg-->
       <geom name="sphere" type="sphere" size="0.09" pos="0 0 -0.14" rgba="1 1 1 1.0" density="55" material="basketball_mat" />

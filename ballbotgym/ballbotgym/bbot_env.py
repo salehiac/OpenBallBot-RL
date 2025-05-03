@@ -248,10 +248,10 @@ class BBotSimulation(gym.Env):
 
         self.step_counter=0
         self.prev_data_time=0
-   
+  
         assert self.model.hfield_nrow.item()==self.model.hfield_ncol.item() and self.model.hfield_ncol.item()%2==1, "invalid hfield rows or cols" 
         self.model.hfield_data=terrain.generate_perlin_terrain(self.model.hfield_nrow.item(),
-                flat_center_size=5,
+                flat_center_size=17,
                 seed=np.random.randint(10000))
 
         if self.passive_viewer is not None:
