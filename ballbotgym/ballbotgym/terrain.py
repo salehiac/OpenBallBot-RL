@@ -10,10 +10,10 @@ from noise import pnoise2
 
 
 def generate_perlin_terrain(n,
-                            scale=2.0,
+                            scale=12.0,
                             octaves=6,
                             persistence=0.4,
-                            lacunarity=1.5,
+                            lacunarity=2,
                             seed=0):
     """
     n                  grid size, should be odd
