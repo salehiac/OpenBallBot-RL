@@ -109,7 +109,6 @@ class BBotSimulation(gym.Env):
             goal_type:str,
             GUI=False,#full mujoco gui
             renderer=True,#just scene render at 60fps
-            apply_random_force_at_init=True,
             im_shape={"h":128,"w":128},
             test_only=False,
             disable_cameras=False):
@@ -122,7 +121,6 @@ class BBotSimulation(gym.Env):
         self.xml_path= xml_path
         self.goal_type=goal_type
         self.max_ep_steps=4000
-        self.apply_random_force_at_init=apply_random_force_at_init
 
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
         if goal_type=="fixed_pos":#uses position
@@ -239,6 +237,50 @@ class BBotSimulation(gym.Env):
 
         print("goal_2d==",self.goal_2d)
 
+    def _reset_terrain(self):
+
+        nrows=self.model.hfield_nrow.item()
+        ncols=self.model.hfield_ncol.item() 
+
+        assert nrows==ncols, f"terrain is expected to have an equal number of rows an cols (got {nrows}, {ncols} in xml file)"
+        assert self.model.hfield_size[0,0]==self.model.hfield_size[0,1], f"terrain should have equal length and width (got {self.model.hfield_size[0,:2]} in xml file)"
+
+        sz=self.model.hfield_size[0,0]
+        hfield_height_coef=self.model.hfield_size[0,2]
+
+        self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=np.random.randint(10000))
+        if self.passive_viewer is not None:
+            self.passive_viewer.update_hfield(mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_HFIELD,"terrain"))
+
+
+        #doing this once to get robot bounding boxes etc
+        mujoco.mj_resetData(self.model, self.data)
+        mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
+      
+         
+        ball_id=mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_GEOM,"the_ball")
+        assert self.data.geom_xpos[ball_id][0]==0 and self.data.geom_xpos[ball_id][1]==0, "terrain generation assumes that the ball is centered at (0,0)"
+        ball_pos = self.data.geom_xpos[ball_id]
+        ball_size = self.model.geom_size[ball_id]
+        aabb_min = ball_pos - ball_size[0]#note that ball_size is specified with only one element in the xml
+        aabb_max = ball_pos + ball_size[0]
+
+        cell_size=sz/nrows
+        center_idx=nrows//2
+
+        terrain_mat=self.model.hfield_data.reshape(nrows,ncols)
+        sub_terr=terrain_mat[
+                center_idx-abs(int(aabb_min[0]//cell_size)): center_idx+int(aabb_max[0]//cell_size)+1,
+                center_idx-abs(int(aabb_min[1]//cell_size)): center_idx+int(aabb_max[1]//cell_size)+1]
+
+        eps=0.01
+        init_robot_height_offset=sub_terr.max()*hfield_height_coef+eps
+
+        #pdb.set_trace()
+
+        return init_robot_height_offset
+
+       
     def reset(self,seed=None,goal:str="random",**kwargs):
 
         print("resetting_env...")
@@ -249,24 +291,15 @@ class BBotSimulation(gym.Env):
 
         self.step_counter=0
         self.prev_data_time=0
-  
-        assert self.model.hfield_nrow.item()==self.model.hfield_ncol.item() and self.model.hfield_ncol.item()%2==1, "invalid hfield rows or cols" 
-        self.model.hfield_data=terrain.generate_perlin_terrain(self.model.hfield_nrow.item(),
-                flat_center_size=17,
-                seed=np.random.randint(10000))
 
-        if self.passive_viewer is not None:
-            self.passive_viewer.update_hfield(mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_HFIELD,"terrain"))
-
+        init_robot_height_offset=self._reset_terrain()
+      
         mujoco.mj_resetData(self.model, self.data)
+        self.data.joint("base_free_joint").qpos[2]+=init_robot_height_offset
+        self.data.joint("ball_free_joint").qpos[2]+=init_robot_height_offset
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
 
-
-        random_force = np.random.uniform(-10, 10, size=3) if self.apply_random_force_at_init else None
-        #random_force=np.array([-11.77391146 , -3.03359904 ,  4.40871597])
-        print("random_force applied at init (N)==",random_force)
-        if random_force is not None:
-            self.data.xfrc_applied[self.model.body("base").id, :3] = random_force
+        #pdb.set_trace()
 
         self.prev_pos=None
         self.prev_orientation=None
@@ -307,13 +340,13 @@ class BBotSimulation(gym.Env):
             rgbd_0=self.rgbd_inputs[0](self.data).astype("float64")
             rgbd_1=self.rgbd_inputs[1](self.data).astype("float64")
 
-        #these would come from IMU or SLAM etc on a real system
+        #body states
         body_id = self.model.body("base").id  
         position = self.data.xpos[body_id].copy().astype("float64")
         orientation = quaternion.quaternion(*self.data.xquat[body_id].copy())
         rot_vec=quaternion.as_rotation_vector(orientation).astype("float64")
 
-        
+        #angular velocities of joints
         motor_state=np.array([self.data.qvel[self.model.joint(f"wheel_joint_{motor_idx}").id] for motor_idx in range(3)])
         motor_state/=10#just to normalize
         if any(np.abs(motor_state)>2):
@@ -556,8 +589,7 @@ def main(args):
 
     sim=BBotSimulation(xml_path=args.xml_path,
             GUI=args.gui,
-            max_ep_steps=args.max_steps,
-            apply_random_force_at_init=True)
+            max_ep_steps=args.max_steps)
 
     obs, _=sim.reset()
     for step_i in range(sim.max_ep_steps):

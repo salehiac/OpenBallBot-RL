@@ -27,8 +27,7 @@ if __name__=="__main__":
             "ballbot-v0.1",
             GUI=True,#full mujoco GUI
             renderer=True,#renders to log
-            apply_random_force_at_init=True,
-            goal_type="rand_dir",#unusued for pid
+            goal_type="fixed_dir",#unusued for pid
             #goal_type="fixed_pos",#unusued for pid
             disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
     
@@ -46,7 +45,7 @@ if __name__=="__main__":
     for step_i in range(env.env.env.max_ep_steps):
         
         ctrl,_=pid.act(
-                torch.tensor(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"]))).float(),
+                torch.tensor(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"][-3:]))).float(),
                 setpoint_r=_setpoint_r,
                 setpoint_p=_setpoint_p,
                 )

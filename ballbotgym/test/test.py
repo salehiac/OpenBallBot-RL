@@ -20,7 +20,6 @@ def main(args):
             "ballbot-v0.1",
             GUI=True,
             goal_type=args.goal_type,
-            apply_random_force_at_init=True,
             disable_cameras=True,
             test_only=False)
     

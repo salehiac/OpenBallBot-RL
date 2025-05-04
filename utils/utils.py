@@ -21,7 +21,6 @@ def make_ballbot_env(
                 GUI=gui,#should be disabled in parallel training
                 goal_type=goal_type,
                 renderer=render_to_logs,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
-                apply_random_force_at_init=False,
                 test_only=test_only,
                 disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
         return Monitor(env) #using a Monitor wrapper to enable logging rollout avg rewards 
