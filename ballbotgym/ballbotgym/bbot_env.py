@@ -24,6 +24,7 @@ import mujoco.viewer
 from . import Rewards, terrain
 
 
+_default_dtype=np.float32
 
 class RGBDInputs:
 
@@ -48,7 +49,7 @@ class RGBDInputs:
 
         self._renderer_rgb.update_scene(data, camera=cam_name)  
         self._renderer_d.update_scene(data, camera=cam_name)  
-        rgb=self._renderer_rgb.render().astype("float64")/255
+        rgb=self._renderer_rgb.render().astype(_default_dtype)/255
         depth=np.expand_dims(self._renderer_d.render(),axis=-1)
 
         #plt.imshow(rgb);plt.title(cam_name);plt.show()
@@ -102,55 +103,55 @@ class BBotSimulation(gym.Env):
         self.camera_frame_rate=90#in Hz
         self.log_options=log_options
 
-        self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
+        self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype)
         if goal_type=="fixed_pos":#uses position
 
             self.observation_space=gym.spaces.Dict({
-                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
-                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
+                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
+                "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=_default_dtype),
+                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                    "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=np.float64),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
+                    "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=_default_dtype),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
                     })
 
         elif goal_type=="rand_dir":#no position, goal conditioned instead
 
             self.observation_space=gym.spaces.Dict({
-                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=np.float64),
-                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
+                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
+                "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=_default_dtype),
+                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                    "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=np.float64),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
+                    "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=_default_dtype),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
                     })
 
         elif goal_type=="fixed_dir":#no position, and no need for goal conditioning
 
             self.observation_space=gym.spaces.Dict({
-                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
-                "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=np.float64),
-                "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
+                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
+                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
+                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
+                "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
+                "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
-                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=np.float64),
-                    "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64),
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
+                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
+                    "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype),
                     })
 
         elif goal_type=="stop" or goal_type=="rand_pos": 
@@ -304,7 +305,7 @@ class BBotSimulation(gym.Env):
         self.prev_time=0
 
 
-        obs=self._get_obs(np.zeros(3))
+        obs=self._get_obs(np.zeros(3).astype(_default_dtype))
         info=self._get_info()
 
         if not self.disable_cameras and self.log_options["cams"]:
@@ -359,8 +360,8 @@ class BBotSimulation(gym.Env):
             #z, and start counting from there, the condition delta_time>0.01111... well again become true when N=12, and so on. So, in 1 second, we will have 1/0.012=83.3333... frames, which is lower 
             #than our desired frame rate. Anyway, I think it's better to have regularly spaced timestamps rather than a forced number of frames with irregualr timestamps
             if self.prev_im_pair.im_0 is None or delta_time>=1.0/self.camera_frame_rate:
-                rgbd_0=self.rgbd_inputs(self.data,"cam_0").astype("float64")
-                rgbd_1=self.rgbd_inputs(self.data,"cam_1").astype("float64")
+                rgbd_0=self.rgbd_inputs(self.data,"cam_0").astype(_default_dtype)
+                rgbd_1=self.rgbd_inputs(self.data,"cam_1").astype(_default_dtype)
                 if self.log_options["cams"]:
                     self.rgbd_hist_0.append(rgbd_0)
                     self.rgbd_hist_1.append(rgbd_1)
@@ -374,12 +375,12 @@ class BBotSimulation(gym.Env):
 
         #body states
         body_id = self.model.body("base").id  
-        position = self.data.xpos[body_id].copy().astype("float64")
+        position = self.data.xpos[body_id].copy().astype(_default_dtype)
         orientation = quaternion.quaternion(*self.data.xquat[body_id].copy())
-        rot_vec=quaternion.as_rotation_vector(orientation).astype("float64")
+        rot_vec=quaternion.as_rotation_vector(orientation).astype(_default_dtype)
 
         #angular velocities of joints
-        motor_state=np.array([self.data.qvel[self.model.joint(f"wheel_joint_{motor_idx}").id] for motor_idx in range(3)])
+        motor_state=np.array([self.data.qvel[self.model.joint(f"wheel_joint_{motor_idx}").id] for motor_idx in range(3)]).astype(_default_dtype)
         motor_state/=10#just to normalize
         if any(np.abs(motor_state)>2):
             print("WARNING!!!!!!!! =========================!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -403,7 +404,7 @@ class BBotSimulation(gym.Env):
             R_2=quaternion.as_rotation_matrix(orientation)
             W=logm(R_1.T @ R_2).real
             vee = lambda S: np.array([S[2,1], S[0,2], S[1,0]])
-            angular_vel=np.clip(vee(W)/self.opt_timestep,a_min=-2.0,a_max=2.0)
+            angular_vel=np.clip(vee(W)/self.opt_timestep,a_min=-2.0,a_max=2.0).astype(_default_dtype)
         else:
             angular_vel=np.zeros_like(rot_vec)
         self.prev_orientation=orientation.copy()
@@ -461,7 +462,7 @@ class BBotSimulation(gym.Env):
         self.data.xfrc_applied[self.model.body("base").id, :3] = np.zeros(3)#this is to reset the initial force that is applied. From the documentation,
                                                                             #the force will be applied unless it is reset
 
-        obs=self._get_obs(omniwheel_commands.astype("float64"))
+        obs=self._get_obs(omniwheel_commands.astype(_default_dtype))
         info=self._get_info()
         terminated=False
         truncated=False
@@ -529,10 +530,10 @@ class BBotSimulation(gym.Env):
             terminated=True
 
         #compute angle with upright vector
-        gravity=np.array([0,0,-1.0]).astype("float").reshape(3,1)
+        gravity=np.array([0,0,-1.0]).astype(_default_dtype).reshape(3,1)
         gravity_local=(quaternion.as_rotation_matrix(quaternion.from_rotation_vector(obs["orientation"][-3:])).T @ (gravity)).reshape(3)
 
-        up_axis_local=np.array([0,0,1]).astype("float")
+        up_axis_local=np.array([0,0,1]).astype(_default_dtype)
         angle_in_degrees=np.arccos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
        
         max_allowed_tilt=20
