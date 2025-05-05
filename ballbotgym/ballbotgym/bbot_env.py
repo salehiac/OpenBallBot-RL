@@ -13,6 +13,7 @@ import cv2
 import string
 import re
 from functools import reduce
+from dataclasses import dataclass
 
 from termcolor import colored
 from scipy.linalg import logm
@@ -21,6 +22,7 @@ import mujoco
 import mujoco.viewer
 
 from . import Rewards, terrain
+
 
 
 class RGBDInputs:
@@ -70,6 +72,12 @@ class RGBDInputs:
         self._renderer_rgb=None
         self._renderer_d.close()
         self._renderer_d=None
+
+@dataclass
+class StampedImPair:
+    im_0: np.ndarray
+    im_1: np.ndarray
+    ts: float
 
 
 class BBotSimulation(gym.Env):
@@ -157,8 +165,10 @@ class BBotSimulation(gym.Env):
         self.rgbd_inputs=None
         if not disable_cameras:
             self.rgbd_inputs=RGBDInputs(self.model,  height=im_shape["h"], width=im_shape["w"], cams=["cam_0", "cam_1"])
-            self.rgbd_hist_0=[]
-            self.rgbd_hist_1=[]
+            self.prev_im_pair=StampedImPair(im_0=None,im_1=None, ts=0)
+            if self.log_options["cams"]:
+                self.rgbd_hist_0=[]
+                self.rgbd_hist_1=[]
         self.disable_cameras=disable_cameras
 
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
@@ -177,6 +187,19 @@ class BBotSimulation(gym.Env):
         self.reward_term_3_hist=[]#constant for now
 
         self.num_episodes=0
+
+    def effective_camera_frame_rate(self):
+
+        #see comment on framerate in self._get_obs
+        dt_mj=self.opt_timestep
+        desired_cam_dt=1/self.camera_frame_rate
+
+        N=np.ceil(desired_cam_dt/dt_mj)
+
+        effective_framre_rate=1.0/(N*dt_mj)
+
+        return effective_framre_rate
+
 
     @property
     def opt_timestep(self):
@@ -273,28 +296,32 @@ class BBotSimulation(gym.Env):
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
 
         self.rgbd_inputs.reset(self.model)#otherwise it wont get updated with the new hfield
+        self.prev_im_pair=StampedImPair(im_0=None,im_1=None, ts=0)
 
         self.prev_pos=None
         self.prev_orientation=None
         self.prev_motor_state=None
+        self.prev_time=0
 
 
         obs=self._get_obs(np.zeros(3))
         info=self._get_info()
 
-        if not self.disable_cameras:
+        if not self.disable_cameras and self.log_options["cams"]:
             self.rgbd_hist_0=[]
             self.rgbd_hist_1=[]
 
         self.G_tau=0.0
         self.num_episodes+=1
 
+        print(colored(f"effective_frame_rate=={self.effective_camera_frame_rate()}","cyan",attrs=["bold"]))
+
         return obs, info
 
     def _save_logs(self):
 
 
-        if self.log_options["cams"]:
+        if not self.disable_cameras and self.log_options["cams"]:
             if not self.disable_cameras:
                 dir_name=f"{self.log_dir}/rgbd_log_episode_{self.num_episodes}"
                 dir_name_rgb=dir_name+"/rgb/"
@@ -320,14 +347,30 @@ class BBotSimulation(gym.Env):
     def _get_obs(self,last_ctrl):
 
         if not self.disable_cameras:
-            if len(self.rgbd_hist_0)<self.data.time*self.camera_frame_rate or not len(self.rgbd_hist_0):
+
+            delta_time=self.data.time-self.prev_im_pair.ts
+            #delta_mujoco=self.data.time-self.prev_time #confirmed that mujoco is running at 500hz with current xml config 
+            #self.prev_time=self.data.time
+          
+            #the following condition generally results in less frames than a condition like "if self.prev_im_pair.im_0 is None or len(self.rgbd_hist_1)<self.camera_frame_rate*self.data.time:",
+            #but it guarantees regular timestamps. For example, while the aforementioned condition will guarantee that we get 90 frames in 1sec for a camera framerate of 90, we would only get
+            #416 frames with the condition below. This is because 1/90=0.011111... and assuming that mujoco is running at 500 hz,  self.data.time is incremented by 1/500=0.002 everytime. The first
+            #timestep N when the condition delta_time>=0.01111... becomes true is when N*0.002>=0.01111... , which implies N=6 and z=N*0.002=0.012. Since we now consider the image timestampe to be this 
+            #z, and start counting from there, the condition delta_time>0.01111... well again become true when N=12, and so on. So, in 1 second, we will have 1/0.012=83.3333... frames, which is lower 
+            #than our desired frame rate. Anyway, I think it's better to have regularly spaced timestamps rather than a forced number of frames with irregualr timestamps
+            if self.prev_im_pair.im_0 is None or delta_time>=1.0/self.camera_frame_rate:
                 rgbd_0=self.rgbd_inputs(self.data,"cam_0").astype("float64")
                 rgbd_1=self.rgbd_inputs(self.data,"cam_1").astype("float64")
-                self.rgbd_hist_0.append(rgbd_0)
-                self.rgbd_hist_1.append(rgbd_1)
+                if self.log_options["cams"]:
+                    self.rgbd_hist_0.append(rgbd_0)
+                    self.rgbd_hist_1.append(rgbd_1)
+
+                self.prev_im_pair.im_0=rgbd_0.copy()
+                self.prev_im_pair.im_1=rgbd_1.copy()
+                self.prev_im_pair.ts=self.data.time
             else:
-                rgbd_0=self.rgbd_hist_0[-1]
-                rgbd_1=self.rgbd_hist_1[-1]
+                rgbd_0=self.prev_im_pair.im_0.copy()
+                rgbd_1=self.prev_im_pair.im_1.copy()
 
         #body states
         body_id = self.model.body("base").id  
@@ -515,7 +558,6 @@ class BBotSimulation(gym.Env):
                 #remove this?
                 pass
                 if 0:
-                    import matplotlib.pyplot as plt
                     aa=np.concatenate(self.action_hist,0)
                     plt.plot(aa[:,0],"r")
                     plt.plot(aa[:,1],"g")
