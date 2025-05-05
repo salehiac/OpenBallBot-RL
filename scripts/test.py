@@ -15,7 +15,7 @@ from utils import make_ballbot_env
 def main(args):
 
 
-    env=make_ballbot_env(gui=True,render_to_logs=True,test_only=True,goal_type=args.goal_type)()
+    env=make_ballbot_env(gui=True,test_only=True,goal_type=args.goal_type)()
 
     if args.algo=="ppo":
         model = PPO.load(args.path)

@@ -72,53 +72,16 @@ class RGBDInputs:
         self._renderer_d=None
 
 
-class SceneRenderer:
-
-    def __init__(self,model):
-
-        self.framerate = 60  # (Hz)
-
-        self.frames = []
-        self.width=480
-        self.height=480
-        self.renderer=mujoco.Renderer(model,width=self.width, height=self.height)
-
-    def reset(self, model, episode):
-
-        self.renderer.close()
-        self.renderer=mujoco.Renderer(model,width=self.width, height=self.height)
-        self.frames=[]
-        self.episode=episode
-
-    def __call__(self, data):
-
-        if len(self.frames) < data.time * self.framerate:
-            self.renderer.update_scene(data)
-            pixels = self.renderer.render()
-            self.frames.append(pixels)
-
-    def dump(self, path):
-
-        #pdb.set_trace()
-        dir_name=f"/episode_{self.episode}"
-        if not os.path.exists(path+dir_name):
-            os.mkdir(path+dir_name)
-        counter=0
-        for frame in self.frames:
-            cv2.imwrite(path+dir_name+f"/frame_{counter}.png",   cv2.merge(cv2.split(frame)[::-1]))
-            counter+=1
-
-
 class BBotSimulation(gym.Env):
 
     def __init__(self,
             xml_path,
             goal_type:str,
             GUI=False,#full mujoco gui
-            renderer=True,#just scene render at 60fps
             im_shape={"h":128,"w":128},
             test_only=False,
-            disable_cameras=False):
+            disable_cameras=False,
+            log_options={"cams":False,"reward_terms":False}):
         """
         goal_type can be 'fixed_pos', 'fixed_dir', 'rand_pos', 'rand_dir', 'stop'
         test_only just gathers some additional debug data - TODO: remove it, I guess?
@@ -129,6 +92,7 @@ class BBotSimulation(gym.Env):
         self.goal_type=goal_type
         self.max_ep_steps=2500
         self.camera_frame_rate=90#in Hz
+        self.log_options=log_options
 
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
         if goal_type=="fixed_pos":#uses position
@@ -198,7 +162,6 @@ class BBotSimulation(gym.Env):
         self.disable_cameras=disable_cameras
 
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
-        self.scene_renderer=SceneRenderer(self.model) if renderer else None
 
         rand_str=''.join(np.random.permutation(list(string.ascii_letters + string.digits))[:12])
         self.log_dir="/tmp/log_"+rand_str
@@ -322,8 +285,6 @@ class BBotSimulation(gym.Env):
         if not self.disable_cameras:
             self.rgbd_hist_0=[]
             self.rgbd_hist_1=[]
-        if self.scene_renderer is not None:
-            self.scene_renderer.reset(self.model,self.num_episodes)
 
         self.G_tau=0.0
         self.num_episodes+=1
@@ -332,26 +293,28 @@ class BBotSimulation(gym.Env):
 
     def _save_logs(self):
 
-        if not self.disable_cameras:
-            dir_name=f"{self.log_dir}/rgbd_log_episode_{self.num_episodes}"
-            dir_name_rgb=dir_name+"/rgb/"
-            dir_name_d=dir_name+"/depth/"
-            #if not os.path.exists(dir_name):
-            os.mkdir(dir_name)
-            os.mkdir(dir_name_d)
-            os.mkdir(dir_name_rgb)
+
+        if self.log_options["cams"]:
+            if not self.disable_cameras:
+                dir_name=f"{self.log_dir}/rgbd_log_episode_{self.num_episodes}"
+                dir_name_rgb=dir_name+"/rgb/"
+                dir_name_d=dir_name+"/depth/"
+                #if not os.path.exists(dir_name):
+                os.mkdir(dir_name)
+                os.mkdir(dir_name_d)
+                os.mkdir(dir_name_rgb)
 
 
-            for ii in range(len(self.rgbd_hist_0)):
-                cv2.imwrite(f"{dir_name_rgb}/rbgd_a_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_0[ii][:,:,:3])[::-1])*255).astype("uint8"))
-                cv2.imwrite(f"{dir_name_rgb}/rbgd_b_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_1[ii][:,:,:3])[::-1])*255).astype("uint8"))
-                cv2.imwrite(f"{dir_name_d}/rbgd_a_{ii}.png",(self.rgbd_hist_0[ii][:,:,3]*255).astype("uint8"))
-                cv2.imwrite(f"{dir_name_d}/rbgd_b_{ii}.png",(self.rgbd_hist_1[ii][:,:,3]*255).astype("uint8"))
+                for ii in range(len(self.rgbd_hist_0)):
+                    cv2.imwrite(f"{dir_name_rgb}/rbgd_a_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_0[ii][:,:,:3])[::-1])*255).astype("uint8"))
+                    cv2.imwrite(f"{dir_name_rgb}/rbgd_b_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_1[ii][:,:,:3])[::-1])*255).astype("uint8"))
+                    cv2.imwrite(f"{dir_name_d}/rbgd_a_{ii}.png",(self.rgbd_hist_0[ii][:,:,3]*255).astype("uint8"))
+                    cv2.imwrite(f"{dir_name_d}/rbgd_b_{ii}.png",(self.rgbd_hist_1[ii][:,:,3]*255).astype("uint8"))
 
-
-        if len(self.reward_term_1_hist):
-            np.save(self.log_dir+"/term_1",np.array(self.reward_term_1_hist))
-            np.save(self.log_dir+"/term_2",np.array(self.reward_term_2_hist))
+        if self.log_options["reward_terms"]:
+            if len(self.reward_term_1_hist):
+                np.save(self.log_dir+"/term_1",np.array(self.reward_term_1_hist))
+                np.save(self.log_dir+"/term_2",np.array(self.reward_term_2_hist))
 
 
     def _get_obs(self,last_ctrl):
@@ -455,9 +418,6 @@ class BBotSimulation(gym.Env):
         self.data.xfrc_applied[self.model.body("base").id, :3] = np.zeros(3)#this is to reset the initial force that is applied. From the documentation,
                                                                             #the force will be applied unless it is reset
 
-        if self.scene_renderer is not None:
-            self.scene_renderer(self.data)
-
         obs=self._get_obs(omniwheel_commands.astype("float64"))
         info=self._get_info()
         terminated=False
@@ -544,9 +504,6 @@ class BBotSimulation(gym.Env):
             #reward+=early_fail_penalty
         else:
             reward+=0.01
-
-        if terminated and self.scene_renderer is not None:
-            self.scene_renderer.dump(self.log_dir)
 
         gamma=1.0#not used algorithmically here anyway
         self.G_tau+=(gamma**self.step_counter)*reward
