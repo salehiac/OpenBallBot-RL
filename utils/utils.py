@@ -20,8 +20,7 @@ def make_ballbot_env(
                 "ballbot-v0.1",
                 GUI=gui,#should be disabled in parallel training
                 goal_type=goal_type,
-                test_only=test_only,
-                disable_cameras=disable_cams)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
+                test_only=test_only)
         return Monitor(env) #using a Monitor wrapper to enable logging rollout avg rewards 
     return _init
 

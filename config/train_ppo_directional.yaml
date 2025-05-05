@@ -10,7 +10,7 @@ algo:
 #goal_type: rand_dir 
 goal_type: fixed_dir
 hidden_sz: 256
-num_envs: 8
+num_envs: 2
 resume: ""
 out: ./log
 seed: 0

@@ -32,12 +32,13 @@ class RGBDInputs:
     def __init__(self,mjc_model, 
             height,
             width,
-            cams:List[str]):
+            cams:List[str],
+            disable_rgb:bool):
 
         self.width=width
         self.height=height
        
-        self._renderer_rgb=mujoco.Renderer(mjc_model, width=width, height=height)
+        self._renderer_rgb=mujoco.Renderer(mjc_model, width=width, height=height) if not disable_rgb else None
         self._renderer_d=mujoco.Renderer(mjc_model, width=width, height=height)
         self._renderer_d.enable_depth_rendering()
 
@@ -47,30 +48,40 @@ class RGBDInputs:
 
         assert cam_name in self.cams, f"wrong cam name (got {cam_name}, available ones are {self.cams})"
 
-        self._renderer_rgb.update_scene(data, camera=cam_name)  
+        if self._renderer_rgb is not None:
+            self._renderer_rgb.update_scene(data, camera=cam_name)  
+            rgb=self._renderer_rgb.render().astype(_default_dtype)/255
+        
         self._renderer_d.update_scene(data, camera=cam_name)  
-        rgb=self._renderer_rgb.render().astype(_default_dtype)/255
+        
         depth=np.expand_dims(self._renderer_d.render(),axis=-1)
 
         #plt.imshow(rgb);plt.title(cam_name);plt.show()
         #plt.imshow(depth);plt.title(cam_name);plt.show()
         #pdb.set_trace()
 
-        arr=np.concatenate([rgb, depth],-1)
+        if self._renderer_rgb is not None:
+            arr=np.concatenate([rgb, depth],-1)
+        else:
+            arr=depth
+
         return arr
 
     def reset(self,mjc_model):
 
-        self._renderer_rgb.close()
         self._renderer_d.close()
-        self._renderer_rgb=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
+        if self._renderer_rgb is not None:
+            self._renderer_rgb.close()
+            self._renderer_rgb=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
+
         self._renderer_d=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
         self._renderer_d.enable_depth_rendering()
 
     def close(self):
 
-        self._renderer_rgb.close()
-        self._renderer_rgb=None
+        if self._renderer_rgb is not None:
+            self._renderer_rgb.close()
+            self._renderer_rgb=None
         self._renderer_d.close()
         self._renderer_d=None
 
@@ -90,7 +101,8 @@ class BBotSimulation(gym.Env):
             im_shape={"h":128,"w":128},
             test_only=False,
             disable_cameras=False,
-            log_options={"cams":False,"reward_terms":False}):
+            depth_only=True,
+            log_options={"cams":True,"reward_terms":False}):
         """
         goal_type can be 'fixed_pos', 'fixed_dir', 'rand_pos', 'rand_dir', 'stop'
         test_only just gathers some additional debug data - TODO: remove it, I guess?
@@ -102,17 +114,19 @@ class BBotSimulation(gym.Env):
         self.max_ep_steps=2500
         self.camera_frame_rate=90#in Hz
         self.log_options=log_options
+        self.depth_only=depth_only
 
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype)
         if goal_type=="fixed_pos":#uses position
 
+            num_channels=1 if self.depth_only else 4
             self.observation_space=gym.spaces.Dict({
                 "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
                 "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
                 "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=_default_dtype),
                 "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
                     "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
                     "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
@@ -122,13 +136,14 @@ class BBotSimulation(gym.Env):
 
         elif goal_type=="rand_dir":#no position, goal conditioned instead
 
+            num_channels=1 if self.depth_only else 4
             self.observation_space=gym.spaces.Dict({
                 "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
                 "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
                 "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=_default_dtype),
                 "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
                     "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
                     "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
@@ -138,14 +153,15 @@ class BBotSimulation(gym.Env):
 
         elif goal_type=="fixed_dir":#no position, and no need for goal conditioning
 
+            num_channels=1 if self.depth_only else 4
             self.observation_space=gym.spaces.Dict({
                 "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
                 "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
                 "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
                 "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
                 "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=_default_dtype),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
                     "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
                     "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
@@ -165,7 +181,7 @@ class BBotSimulation(gym.Env):
 
         self.rgbd_inputs=None
         if not disable_cameras:
-            self.rgbd_inputs=RGBDInputs(self.model,  height=im_shape["h"], width=im_shape["w"], cams=["cam_0", "cam_1"])
+            self.rgbd_inputs=RGBDInputs(self.model,  height=im_shape["h"], width=im_shape["w"], cams=["cam_0", "cam_1"], disable_rgb=self.depth_only)
             self.prev_im_pair=StampedImPair(im_0=None,im_1=None, ts=0)
             if self.log_options["cams"]:
                 self.rgbd_hist_0=[]
@@ -334,10 +350,14 @@ class BBotSimulation(gym.Env):
 
 
                 for ii in range(len(self.rgbd_hist_0)):
-                    cv2.imwrite(f"{dir_name_rgb}/rbgd_a_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_0[ii][:,:,:3])[::-1])*255).astype("uint8"))
-                    cv2.imwrite(f"{dir_name_rgb}/rbgd_b_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_1[ii][:,:,:3])[::-1])*255).astype("uint8"))
-                    cv2.imwrite(f"{dir_name_d}/rbgd_a_{ii}.png",(self.rgbd_hist_0[ii][:,:,3]*255).astype("uint8"))
-                    cv2.imwrite(f"{dir_name_d}/rbgd_b_{ii}.png",(self.rgbd_hist_1[ii][:,:,3]*255).astype("uint8"))
+                    if not self.depth_only:
+                        cv2.imwrite(f"{dir_name_rgb}/rbgd_a_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_0[ii][:,:,:3])[::-1])*255).astype("uint8"))
+                        cv2.imwrite(f"{dir_name_rgb}/rbgd_b_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_1[ii][:,:,:3])[::-1])*255).astype("uint8"))
+                        cv2.imwrite(f"{dir_name_d}/depth_a_{ii}.png",(self.rgbd_hist_0[ii][:,:,3]*255).astype("uint8"))
+                        cv2.imwrite(f"{dir_name_d}/depth_b_{ii}.png",(self.rgbd_hist_1[ii][:,:,3]*255).astype("uint8"))
+                    else:
+                        cv2.imwrite(f"{dir_name_d}/depth_a_{ii}.png",(self.rgbd_hist_0[ii]*255).astype("uint8"))
+                        cv2.imwrite(f"{dir_name_d}/depth_b_{ii}.png",(self.rgbd_hist_1[ii]*255).astype("uint8"))
 
         if self.log_options["reward_terms"]:
             if len(self.reward_term_1_hist):
@@ -386,7 +406,6 @@ class BBotSimulation(gym.Env):
             print("WARNING!!!!!!!! =========================!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             print(motor_state)
         motor_state=np.clip(motor_state,a_min=-2.0,a_max=2.0)
-        #motor_acc=(motor_state-self.prev_motor_state)/self.opt_timestep if self.prev_motor_state is not None else np.zeros_like(motor_state)
         self.prev_motor_state=motor_state.copy()
 
         #compute velocity
