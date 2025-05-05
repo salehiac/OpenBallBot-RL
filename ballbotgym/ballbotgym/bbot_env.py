@@ -25,44 +25,42 @@ from . import Rewards, terrain
 
 class RGBDInputs:
 
-    def __init__(self,mjc_model, cam_name, height, width, normalize=True):
+
+    def __init__(self,mjc_model, 
+            height,
+            width,
+            cams:List[str]):
 
         self.width=width
         self.height=height
-        
-        self.renderer_rgb=mujoco.Renderer(mjc_model, width=width, height=height)
-        self.renderer_d=mujoco.Renderer(mjc_model, width=width, height=height)
-        self.renderer_d.enable_depth_rendering()
+       
+        self._renderer_rgb=mujoco.Renderer(mjc_model, width=width, height=height)
+        self._renderer_d=mujoco.Renderer(mjc_model, width=width, height=height)
+        self._renderer_d.enable_depth_rendering()
 
-        self.cam_name=cam_name
-        self.normalize=normalize
+        self.cams=cams
 
-    def reset(self,mjc_model):
+    def __call__(self, data, cam_name:str):
 
-        self.renderer_rgb.close()
-        self.renderer_d.close()
-        
-        self.renderer_rgb=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
-        self.renderer_d=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
-        self.renderer_d.enable_depth_rendering()
+        assert cam_name in self.cams, f"wrong cam name (got {cam_name}, available ones are {self.cams})"
 
-    def __call__(self, data):
+        self._renderer_rgb.update_scene(data, camera=cam_name)  
+        self._renderer_d.update_scene(data, camera=cam_name)  
+        rgb=self._renderer_rgb.render().astype("float64")/255
+        depth=np.expand_dims(self._renderer_d.render(),axis=-1)
 
-        self.renderer_rgb.update_scene(data, camera=self.cam_name)  
-        self.renderer_d.update_scene(data, camera=self.cam_name)  
-        rgb=self.renderer_rgb.render().astype("float64")
-        depth=np.expand_dims(self.renderer_d.render(),axis=-1)
+        #plt.imshow(depth);plt.title(cam_name);plt.show()
+        #pdb.set_trace()
 
-        if self.normalize:
-            rgb/=255.0
-        return np.concatenate([rgb, depth],-1)
+        arr=np.concatenate([rgb, depth],-1)
+        return arr
 
     def close(self):
 
-        self.renderer_rgb.close()
-        self.renderer_rgb=None
-        self.renderer_d.close()
-        self.renderer_d=None
+        self._renderer_rgb.close()
+        self._renderer_rgb=None
+        self._renderer_d.close()
+        self._renderer_d=None
 
 
 class SceneRenderer:
@@ -120,7 +118,7 @@ class BBotSimulation(gym.Env):
 
         self.xml_path= xml_path
         self.goal_type=goal_type
-        self.max_ep_steps=4000
+        self.max_ep_steps=2500
 
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
         if goal_type=="fixed_pos":#uses position
@@ -157,19 +155,20 @@ class BBotSimulation(gym.Env):
 
         elif goal_type=="fixed_dir":#no position, and no need for goal conditioning
 
-            self.window=3
             self.observation_space=gym.spaces.Dict({
                 "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
                 "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
                 "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=np.float64),
+                "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64),
                 "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
                 "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], 4), dtype=np.float64),
                 }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3*self.window,), dtype=np.float64),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3*self.window,), dtype=np.float64),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3*self.window,), dtype=np.float64),
-                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3*self.window,),dtype=np.float64),
-                    "actions": gym.spaces.Box(-1.0,1.0,shape=(3*self.window,),dtype=np.float64),
+                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float64),
+                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=np.float64),
+                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=np.float64),
+                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=np.float64),
+                    "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64),
                     })
 
         elif goal_type=="stop" or goal_type=="rand_pos": 
@@ -183,13 +182,13 @@ class BBotSimulation(gym.Env):
 
         self.rgbd_inputs=None
         if not disable_cameras:
-            self.rgbd_inputs=[RGBDInputs(self.model, cam_name="cam_0", height=im_shape["h"], width=im_shape["w"]), RGBDInputs(self.model, cam_name="cam_1", height=im_shape["h"], width=im_shape["w"])]
+            self.rgbd_inputs=RGBDInputs(self.model,  height=im_shape["h"], width=im_shape["w"], cams=["cam_0", "cam_1"])
+            self.rgbd_hist_0=[]
+            self.rgbd_hist_1=[]
         self.disable_cameras=disable_cameras
 
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
         self.scene_renderer=SceneRenderer(self.model) if renderer else None
-
-        self.num_resets=0
 
         rand_str=''.join(np.random.permutation(list(string.ascii_letters + string.digits))[:12])
         self.log_dir="/tmp/log_"+rand_str
@@ -203,6 +202,8 @@ class BBotSimulation(gym.Env):
         self.reward_term_1_hist=[]#
         self.reward_term_2_hist=[]
         self.reward_term_3_hist=[]#constant for now
+
+        self.num_episodes=0
 
     @property
     def opt_timestep(self):
@@ -299,46 +300,57 @@ class BBotSimulation(gym.Env):
         self.data.joint("ball_free_joint").qpos[2]+=init_robot_height_offset
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
 
-        #pdb.set_trace()
 
         self.prev_pos=None
         self.prev_orientation=None
         self.prev_motor_state=None
 
 
-        #each of those will be of length (self.window-1)*relevant_dim, since the latest obs (of size relevant_dim) will be concatenated to it by _get_obs
-        self.obs_window={
-                "orientation": np.zeros((self.window-1)*3),
-                "angular_vel": np.zeros((self.window-1)*3),
-                "vel": np.zeros((self.window-1)*3),
-                "motor_state": np.zeros((self.window-1)*3),
-                "actions": np.zeros((self.window-1)*3),
-                }
-       
         obs=self._get_obs(np.zeros(3))
         info=self._get_info()
 
         if not self.disable_cameras:
-            for rgbd_input in self.rgbd_inputs:
-                rgbd_input.reset(self.model)
+            self.rgbd_hist_0=[]
+            self.rgbd_hist_1=[]
         if self.scene_renderer is not None:
-            self.scene_renderer.reset(self.model,self.num_resets)
+            self.scene_renderer.reset(self.model,self.num_episodes)
 
         self.G_tau=0.0
-       
-        self.num_resets+=1
+        self.num_episodes+=1
+
+        return obs, info
+
+    def _save_logs(self):
+
+        if not self.disable_cameras:
+            dir_name=f"{self.log_dir}/rgbd_log_episode_{self.num_episodes}"
+            dir_name_rgb=dir_name+"/rgb/"
+            dir_name_d=dir_name+"/depth/"
+            #if not os.path.exists(dir_name):
+            os.mkdir(dir_name)
+            os.mkdir(dir_name_d)
+            os.mkdir(dir_name_rgb)
+
+
+            for ii in range(len(self.rgbd_hist_0)):
+                cv2.imwrite(f"{dir_name_rgb}/rbgd_a_{ii}.png",cv2.merge(cv2.split(self.rgbd_hist_0[ii][:,:,:3])[::-1])*255)
+                cv2.imwrite(f"{dir_name_rgb}/rbgd_b_{ii}.png",cv2.merge(cv2.split(self.rgbd_hist_1[ii][:,:,:3])[::-1])*255)
+                cv2.imwrite(f"{dir_name_d}/rbgd_a_{ii}.png",self.rgbd_hist_0[ii][:,:,3]*255)
+                cv2.imwrite(f"{dir_name_d}/rbgd_b_{ii}.png",self.rgbd_hist_1[ii][:,:,3]*255)
+
 
         if len(self.reward_term_1_hist):
             np.save(self.log_dir+"/term_1",np.array(self.reward_term_1_hist))
             np.save(self.log_dir+"/term_2",np.array(self.reward_term_2_hist))
 
-        return obs, info
 
     def _get_obs(self,last_ctrl):
 
         if not self.disable_cameras:
-            rgbd_0=self.rgbd_inputs[0](self.data).astype("float64")
-            rgbd_1=self.rgbd_inputs[1](self.data).astype("float64")
+            rgbd_0=self.rgbd_inputs(self.data,"cam_0").astype("float64")
+            rgbd_1=self.rgbd_inputs(self.data,"cam_1").astype("float64")
+            self.rgbd_hist_0.append(rgbd_0)
+            self.rgbd_hist_1.append(rgbd_1)
 
         #body states
         body_id = self.model.body("base").id  
@@ -393,17 +405,9 @@ class BBotSimulation(gym.Env):
             
             if self.disable_cameras:
                 obs_cur={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl}
-                assert self.window==3, "hardcoded for a size 3 sliding window"
-                for key in obs_cur.keys():
-                    dim=obs_cur[key].shape[0]
-                    obs_cur[key]=np.hstack([self.obs_window[key], obs_cur[key]])
-
-                    self.obs_window[key][:dim]=self.obs_window[key][dim:2*dim]
-                    self.obs_window[key][dim:2*dim]=obs_cur[key][2*dim:]
-
                 obs=obs_cur
             else:
-                raise Exception("this is not handled yet")
+                obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl, "rgbd_0":rgbd_0, "rgbd_1":rgbd_1}
         #print("obs==",obs)
         return obs
     
@@ -440,7 +444,7 @@ class BBotSimulation(gym.Env):
         if self.scene_renderer is not None:
             self.scene_renderer(self.data)
 
-        obs=self._get_obs(omniwheel_commands)
+        obs=self._get_obs(omniwheel_commands.astype("float64"))
         info=self._get_info()
         terminated=False
         truncated=False
@@ -535,7 +539,7 @@ class BBotSimulation(gym.Env):
         self.G_tau+=(gamma**self.step_counter)*reward
         if terminated:
             print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
-
+            self._save_logs()
             if self.test_only:
                 #remove this?
                 pass
@@ -563,8 +567,7 @@ class BBotSimulation(gym.Env):
     def close(self):
 
         if not self.disable_cameras:
-            for i in range(len(self.rgbd_inputs)):
-                self.rgbd_inputs[i].close()
+            self.rgbd_inputs.close()
 
         if self.passive_viewer:
             self.passive_viewer.close()

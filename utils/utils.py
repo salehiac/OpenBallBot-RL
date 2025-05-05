@@ -11,7 +11,8 @@ def make_ballbot_env(
         goal_type,
         gui=False,
         render_to_logs=False,
-        test_only=False):
+        test_only=False,
+        disable_cams=False):
     """
     goal_type can be 'fixed_pos', 'fixed_dir', 'rand_dir', 'rand_pos', 'stop'
     """
@@ -22,7 +23,7 @@ def make_ballbot_env(
                 goal_type=goal_type,
                 renderer=render_to_logs,#this renders to logs, but is currently not supported for parallel envs. TODO: make the logs have an instance dependent name so it works
                 test_only=test_only,
-                disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
+                disable_cameras=disable_cams)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
         return Monitor(env) #using a Monitor wrapper to enable logging rollout avg rewards 
     return _init
 

@@ -161,6 +161,7 @@ def main(config):
             )
         ])
 
+    #pdb.set_trace()    
     model.learn(total_timesteps=total_timesteps,callback=callback)
         
     vec_env.close()

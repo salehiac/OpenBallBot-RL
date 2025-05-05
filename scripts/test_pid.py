@@ -26,10 +26,10 @@ if __name__=="__main__":
     env=gym.make(
             "ballbot-v0.1",
             GUI=True,#full mujoco GUI
-            renderer=True,#renders to log
+            renderer=False,#renders to log
             goal_type="fixed_dir",#unusued for pid
             #goal_type="fixed_pos",#unusued for pid
-            disable_cameras=True)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
+            disable_cameras=False)#we disable cameras here since 1) the pid doesn't use them and 2) it considerably speeds up the simulation
     
     #k_vals=[20,5,2] #works for 1khz
     k_vals=[20,15,2] #better for 500hz, but not optimal

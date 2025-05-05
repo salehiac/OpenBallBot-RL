@@ -4,6 +4,8 @@
   <option cone="elliptic"/>
   <option integrator="RK4"/>
 
+  <visual><map znear="0.0001" zfar="150"/></visual>
+
 
 
   <asset>
