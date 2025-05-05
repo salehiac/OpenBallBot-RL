@@ -98,11 +98,11 @@ class BBotSimulation(gym.Env):
             xml_path,
             goal_type:str,
             GUI=False,#full mujoco gui
-            im_shape={"h":128,"w":128},
+            im_shape={"h":32,"w":32},
             test_only=False,
             disable_cameras=False,
             depth_only=True,
-            log_options={"cams":True,"reward_terms":False}):
+            log_options={"cams":False,"reward_terms":False}):
         """
         goal_type can be 'fixed_pos', 'fixed_dir', 'rand_pos', 'rand_dir', 'stop'
         test_only just gathers some additional debug data - TODO: remove it, I guess?
@@ -160,8 +160,8 @@ class BBotSimulation(gym.Env):
                 "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
                 "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
                 "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
+                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
+                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
                     "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
                     "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
@@ -447,7 +447,7 @@ class BBotSimulation(gym.Env):
                 obs_cur={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl}
                 obs=obs_cur
             else:
-                obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl, "rgbd_0":rgbd_0, "rgbd_1":rgbd_1}
+                obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl, "rgbd_0":rgbd_0.transpose(2,0,1), "rgbd_1":rgbd_1.transpose(2,0,1)}
         #print("obs==",obs)
         return obs
     

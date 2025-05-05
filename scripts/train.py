@@ -12,9 +12,12 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
 from stable_baselines3.common.noise import VectorizedActionNoise, NormalActionNoise
 from stable_baselines3.common.logger import configure
+from termcolor import colored
 
 sys.path.append("..")
 from utils import make_ballbot_env
+import policies
+
 
 
 class ReturnLoggingCallback(BaseCallback):
@@ -75,7 +78,6 @@ def lr_schedule(progress_remaining):
 def main(config):
 
 
-        
    
     if config["algo"]["name"]=="ppo":
 
@@ -84,7 +86,10 @@ def main(config):
             activation_fn=torch.nn.LeakyReLU,
             net_arch=dict(
                 pi=[config["hidden_sz"], config["hidden_sz"]],
-                vf=[config["hidden_sz"], config["hidden_sz"]]))
+                vf=[config["hidden_sz"], config["hidden_sz"]]),
+            features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
+            )
+
 
         N_ENVS = int(config["num_envs"])
 
@@ -161,6 +166,9 @@ def main(config):
             )
         ])
 
+    print(model.policy)
+    num_params=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
+    print(colored(f"num_params={num_params}","cyan",attrs=["bold"]))
     #pdb.set_trace()    
     model.learn(total_timesteps=total_timesteps,callback=callback)
         

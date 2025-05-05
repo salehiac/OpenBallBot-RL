@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import pdb
 import sys
 from abc import ABC, abstractmethod
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+import gymnasium as gym
 
 sys.path.append("..")
 import utils
@@ -13,6 +15,52 @@ class Policy(ABC):
     def act(self,*args):
         pass
 
+
+
+class Extractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Dict):
+        
+        super().__init__(observation_space, features_dim=1)
+
+        extractors = {}
+
+        total_concat_size = 0
+        
+        for key, subspace in observation_space.spaces.items():
+            
+            if "rgbd_" in key:
+               
+                #note that we're iterating on observation_space objects, so there is not batch size info
+                C,H,W=subspace.shape #typically, C=1 and H=W=32 here
+                extractors[key] = torch.nn.Sequential(
+                    torch.nn.Conv2d(1, 8, kernel_size=3, stride=2, padding=1),
+                    torch.nn.ReLU(),
+                    torch.nn.Conv2d(8, 8, kernel_size=3, stride=2, padding=1), 
+                    torch.nn.ReLU(),
+                    torch.nn.Flatten(),                                       
+                    torch.nn.Linear(512, 16),                                  
+                    torch.nn.ReLU(),
+                    )
+
+                total_concat_size += 16
+            else:
+                #note that we're iterating on observation_space objects, so there is not batch size info
+                S=subspace.shape[0]
+                extractors[key] = torch.nn.Flatten()
+                total_concat_size += S
+
+        self.extractors = torch.nn.ModuleDict(extractors)
+
+        # Update the features dim manually
+        self._features_dim = total_concat_size
+
+    def forward(self, observations) -> torch.Tensor:
+        encoded_tensor_list = []
+
+        for key, extractor in self.extractors.items():
+            encoded_tensor_list.append(extractor(observations[key]))
+        
+        return torch.cat(encoded_tensor_list, dim=1)
 
 class PID(Policy):
     """
