@@ -128,6 +128,7 @@ class BBotSimulation(gym.Env):
         self.xml_path= xml_path
         self.goal_type=goal_type
         self.max_ep_steps=2500
+        self.camera_frame_rate=90#in Hz
 
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=np.float64)
         if goal_type=="fixed_pos":#uses position
@@ -342,10 +343,10 @@ class BBotSimulation(gym.Env):
 
 
             for ii in range(len(self.rgbd_hist_0)):
-                cv2.imwrite(f"{dir_name_rgb}/rbgd_a_{ii}.png",cv2.merge(cv2.split(self.rgbd_hist_0[ii][:,:,:3])[::-1])*255)
-                cv2.imwrite(f"{dir_name_rgb}/rbgd_b_{ii}.png",cv2.merge(cv2.split(self.rgbd_hist_1[ii][:,:,:3])[::-1])*255)
-                cv2.imwrite(f"{dir_name_d}/rbgd_a_{ii}.png",self.rgbd_hist_0[ii][:,:,3]*255)
-                cv2.imwrite(f"{dir_name_d}/rbgd_b_{ii}.png",self.rgbd_hist_1[ii][:,:,3]*255)
+                cv2.imwrite(f"{dir_name_rgb}/rbgd_a_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_0[ii][:,:,:3])[::-1])*255).astype("uint8"))
+                cv2.imwrite(f"{dir_name_rgb}/rbgd_b_{ii}.png",(cv2.merge(cv2.split(self.rgbd_hist_1[ii][:,:,:3])[::-1])*255).astype("uint8"))
+                cv2.imwrite(f"{dir_name_d}/rbgd_a_{ii}.png",(self.rgbd_hist_0[ii][:,:,3]*255).astype("uint8"))
+                cv2.imwrite(f"{dir_name_d}/rbgd_b_{ii}.png",(self.rgbd_hist_1[ii][:,:,3]*255).astype("uint8"))
 
 
         if len(self.reward_term_1_hist):
@@ -356,10 +357,14 @@ class BBotSimulation(gym.Env):
     def _get_obs(self,last_ctrl):
 
         if not self.disable_cameras:
-            rgbd_0=self.rgbd_inputs(self.data,"cam_0").astype("float64")
-            rgbd_1=self.rgbd_inputs(self.data,"cam_1").astype("float64")
-            self.rgbd_hist_0.append(rgbd_0)
-            self.rgbd_hist_1.append(rgbd_1)
+            if len(self.rgbd_hist_0)<self.data.time*self.camera_frame_rate or not len(self.rgbd_hist_0):
+                rgbd_0=self.rgbd_inputs(self.data,"cam_0").astype("float64")
+                rgbd_1=self.rgbd_inputs(self.data,"cam_1").astype("float64")
+                self.rgbd_hist_0.append(rgbd_0)
+                self.rgbd_hist_1.append(rgbd_1)
+            else:
+                rgbd_0=self.rgbd_hist_0[-1]
+                rgbd_1=self.rgbd_hist_1[-1]
 
         #body states
         body_id = self.model.body("base").id  
@@ -540,7 +545,6 @@ class BBotSimulation(gym.Env):
         else:
             reward+=0.01
 
-        #print("step_counter==",self.step_counter)
         if terminated and self.scene_renderer is not None:
             self.scene_renderer.dump(self.log_dir)
 
@@ -549,6 +553,7 @@ class BBotSimulation(gym.Env):
         if terminated:
             print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
             self._save_logs()
+            print(colored(f"Episode took {self.data.time} in simulation time","magenta",attrs=["bold"]))
             if self.test_only:
                 #remove this?
                 pass
