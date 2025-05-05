@@ -49,11 +49,20 @@ class RGBDInputs:
         rgb=self._renderer_rgb.render().astype("float64")/255
         depth=np.expand_dims(self._renderer_d.render(),axis=-1)
 
+        #plt.imshow(rgb);plt.title(cam_name);plt.show()
         #plt.imshow(depth);plt.title(cam_name);plt.show()
         #pdb.set_trace()
 
         arr=np.concatenate([rgb, depth],-1)
         return arr
+
+    def reset(self,mjc_model):
+
+        self._renderer_rgb.close()
+        self._renderer_d.close()
+        self._renderer_rgb=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
+        self._renderer_d=mujoco.Renderer(mjc_model, width=self.width, height=self.height)
+        self._renderer_d.enable_depth_rendering()
 
     def close(self):
 
@@ -253,7 +262,6 @@ class BBotSimulation(gym.Env):
         if self.passive_viewer is not None:
             self.passive_viewer.update_hfield(mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_HFIELD,"terrain"))
 
-
         #doing this once to get robot bounding boxes etc
         mujoco.mj_resetData(self.model, self.data)
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
@@ -300,6 +308,7 @@ class BBotSimulation(gym.Env):
         self.data.joint("ball_free_joint").qpos[2]+=init_robot_height_offset
         mujoco.mj_forward(self.model, self.data) #recompute derivatives etc
 
+        self.rgbd_inputs.reset(self.model)#otherwise it wont get updated with the new hfield
 
         self.prev_pos=None
         self.prev_orientation=None
