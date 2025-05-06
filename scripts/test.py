@@ -26,7 +26,7 @@ def main(args):
         else:
             raise Exception("unknown algo")
 
-        p_sum=sum([np.abs(param.sum().item()) for param in model.policy.parameters() if param.requires_grad])
+        p_sum=sum([param.abs().sum().item() for param in model.policy.parameters() if param.requires_grad])
         print(colored(f"sum_of_model_params=={p_sum}","yellow"))
 
         for test_i in range(args.n_test):
