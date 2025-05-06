@@ -20,7 +20,7 @@ def main(args):
             "ballbot-v0.1",
             GUI=True,
             goal_type=args.goal_type,
-            depth_only=False,
+            depth_only=True,
             test_only=False)
     
     obs, _=env.reset()

@@ -9,8 +9,8 @@ algo:
   n_steps: 2048 #n_steps means n_steps per env before update
 #goal_type: rand_dir 
 goal_type: fixed_dir
-hidden_sz: 256
-num_envs: 2
+hidden_sz: 512
+num_envs: 8
 resume: ""
 out: ./log
 seed: 0

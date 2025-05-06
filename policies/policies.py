@@ -29,17 +29,23 @@ class Extractor(BaseFeaturesExtractor):
         for key, subspace in observation_space.spaces.items():
             
             if "rgbd_" in key:
-               
+              
                 #note that we're iterating on observation_space objects, so there is not batch size info
                 C,H,W=subspace.shape #typically, C=1 and H=W=32 here
+                F1=8
+                F2=8
+                out_sz=16
                 extractors[key] = torch.nn.Sequential(
-                    torch.nn.Conv2d(1, 8, kernel_size=3, stride=2, padding=1),
-                    torch.nn.ReLU(),
-                    torch.nn.Conv2d(8, 8, kernel_size=3, stride=2, padding=1), 
-                    torch.nn.ReLU(),
+                    torch.nn.Conv2d(1, F1, kernel_size=3, stride=2, padding=1), #output BxF1xH/2xW/2
+                    torch.nn.BatchNorm2d(F1),
+                    torch.nn.LeakyReLU(),
+                    torch.nn.Conv2d(F1, F2, kernel_size=3, stride=2, padding=1), #output BxF2xH/4xW/4
+                    torch.nn.BatchNorm2d(F2),
+                    torch.nn.LeakyReLU(),
                     torch.nn.Flatten(),                                       
-                    torch.nn.Linear(512, 16),                                  
-                    torch.nn.ReLU(),
+                    torch.nn.Linear(F2*H//4*W//4, out_sz),                                  
+                    torch.nn.BatchNorm1d(out_sz),
+                    torch.nn.LeakyReLU(),
                     )
 
                 total_concat_size += 16
@@ -56,10 +62,19 @@ class Extractor(BaseFeaturesExtractor):
 
     def forward(self, observations) -> torch.Tensor:
         encoded_tensor_list = []
+        encoded_tensor_dict={}#for debug only
 
         for key, extractor in self.extractors.items():
-            encoded_tensor_list.append(extractor(observations[key]))
-        
+            cur=extractor(observations[key])
+            
+            #if "rgbd_" in key:
+            #    print(observations[key])
+            #encoded_tensor_dict[key]=cur
+            
+            encoded_tensor_list.append(cur)
+      
+        #for k,v in encoded_tensor_dict.items():
+        #    print(k,v)
         return torch.cat(encoded_tensor_list, dim=1)
 
 class PID(Policy):

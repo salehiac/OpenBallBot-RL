@@ -95,20 +95,21 @@ def main(config):
 
         vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"]) for _ in range(N_ENVS)])
 
-        #device is set to cpu because from the documentation, stabe_baseline_3's PPO is meant to run on cpu
+        #even though stabe_baseline_3's PPO is primarily meant to run on cpu (per their documentation), the CNN runs like 10x times faster on GPU, so...
+        device="cuda"
         if not config["resume"]:
             model = PPO("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
                     ent_coef=float(config["algo"]["ent_coef"]),
-                    device="cpu",
+                    device=device,
                     clip_range=float(config["algo"]["clip_range"]),
                     vf_coef=float(config["algo"]["vf_coef"]),
                     learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
                     policy_kwargs=policy_kwargs,
                     n_steps=int(config["algo"]["n_steps"]))
         else:
-            model=PPO.load(config["resume"],device="cpu",env=vec_env)
+            model=PPO.load(config["resume"],device=device,env=vec_env)
 
         #pdb.set_trace()
         
@@ -160,7 +161,7 @@ def main(config):
     callback = CallbackList([
         ReturnLoggingCallback(N_ENVS,log_dir=f"{config['out']}/"),
         CheckpointCallback(
-            save_freq=1000,               
+            save_freq=1000 if config["algo"]["name"]!="ppo" else 10000,
             save_path=f"{config['out']}/checkpoints/", 
             name_prefix=f"{config['algo']['name']}_agent"     
             )

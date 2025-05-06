@@ -98,7 +98,7 @@ class BBotSimulation(gym.Env):
             xml_path,
             goal_type:str,
             GUI=False,#full mujoco gui
-            im_shape={"h":32,"w":32},
+            im_shape={"h":64,"w":64},
             test_only=False,
             disable_cameras=False,
             depth_only=True,
