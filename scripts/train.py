@@ -85,8 +85,8 @@ def main(config):
         policy_kwargs = dict(
             activation_fn=torch.nn.LeakyReLU,
             net_arch=dict(
-                pi=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]],
-                vf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
+                pi=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]],
+                vf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
             features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
             features_extractor_kwargs={"frozen_encoder_path":config["frozen_cnn"]},
             )
