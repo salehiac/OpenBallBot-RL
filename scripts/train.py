@@ -85,9 +85,10 @@ def main(config):
         policy_kwargs = dict(
             activation_fn=torch.nn.LeakyReLU,
             net_arch=dict(
-                pi=[config["hidden_sz"], config["hidden_sz"]],
-                vf=[config["hidden_sz"], config["hidden_sz"]]),
+                pi=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]],
+                vf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
             features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
+            features_extractor_kwargs={"frozen_encoder_path":config["frozen_cnn"]},
             )
 
 
@@ -168,8 +169,10 @@ def main(config):
         ])
 
     print(model.policy)
-    num_params=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
-    print(colored(f"num_params={num_params}","cyan",attrs=["bold"]))
+    num_params_total=sum([param.numel() for param in model.policy.parameters()])
+    num_params_learnable=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
+    print(colored(f"num_total_params={num_params_total}","cyan",attrs=["bold"]))
+    print(colored(f"num_learnable_params={num_params_learnable}","cyan",attrs=["bold"]))
     #pdb.set_trace()    
     model.learn(total_timesteps=total_timesteps,callback=callback)
         

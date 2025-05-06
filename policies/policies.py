@@ -18,7 +18,7 @@ class Policy(ABC):
 
 
 class Extractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Dict):
+    def __init__(self, observation_space: gym.spaces.Dict, frozen_encoder_path:str=""):
         
         super().__init__(observation_space, features_dim=1)
 
@@ -29,26 +29,38 @@ class Extractor(BaseFeaturesExtractor):
         for key, subspace in observation_space.spaces.items():
             
             if "rgbd_" in key:
-              
-                #note that we're iterating on observation_space objects, so there is not batch size info
-                C,H,W=subspace.shape #typically, C=1 and H=W=32 here
-                F1=8
-                F2=8
-                out_sz=16
-                extractors[key] = torch.nn.Sequential(
-                    torch.nn.Conv2d(1, F1, kernel_size=3, stride=2, padding=1), #output BxF1xH/2xW/2
-                    torch.nn.BatchNorm2d(F1),
-                    torch.nn.LeakyReLU(),
-                    torch.nn.Conv2d(F1, F2, kernel_size=3, stride=2, padding=1), #output BxF2xH/4xW/4
-                    torch.nn.BatchNorm2d(F2),
-                    torch.nn.LeakyReLU(),
-                    torch.nn.Flatten(),                                       
-                    torch.nn.Linear(F2*H//4*W//4, out_sz),                                  
-                    torch.nn.BatchNorm1d(out_sz),
-                    torch.nn.LeakyReLU(),
-                    )
+             
+                if not frozen_encoder_path:
+                    #note that we're iterating on observation_space objects, so there is not batch size info
+                    C,H,W=subspace.shape #typically, C=1 and H=W=32 here
+                    F1=8
+                    F2=8
+                    out_sz=16
+                    extractors[key] = torch.nn.Sequential(
+                        torch.nn.Conv2d(1, F1, kernel_size=3, stride=2, padding=1), #output BxF1xH/2xW/2
+                        torch.nn.BatchNorm2d(F1),
+                        torch.nn.LeakyReLU(),
+                        torch.nn.Conv2d(F1, F2, kernel_size=3, stride=2, padding=1), #output BxF2xH/4xW/4
+                        torch.nn.BatchNorm2d(F2),
+                        torch.nn.LeakyReLU(),
+                        torch.nn.Flatten(),                                       
+                        torch.nn.Linear(F2*H//4*W//4, out_sz),                                  
+                        torch.nn.BatchNorm1d(out_sz),
+                        torch.nn.LeakyReLU(),
+                        )
 
-                total_concat_size += 16
+                    total_concat_size += 16
+                else:
+                    print(f"loading encoder from {frozen_encoder_path}")
+                    extractors[key]=torch.load(frozen_encoder_path,weights_only=False)
+                    p_sum=sum([param.abs().sum().item() for param in extractors[key].parameters() if param.requires_grad])
+                    assert p_sum==extractors[key].p_sum, "unexpected model params sum. The file might be corrupted"
+                    last_linear = [m for m in extractors[key].modules() if isinstance(m, torch.nn.Linear)][-1]
+                    total_concat_size+=last_linear.out_features #in the current code, it is 16 anyway
+
+                    for param in extractors[key].parameters():#to keep it frozen
+                        param.requires_grad = False
+
             else:
                 #note that we're iterating on observation_space objects, so there is not batch size info
                 S=subspace.shape[0]
