@@ -89,6 +89,8 @@ def main(config):
                 vf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
             features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
             features_extractor_kwargs={"frozen_encoder_path":config["frozen_cnn"]},
+            optimizer_class=torch.optim.AdamW,
+            optimizer_kwargs={"weight_decay":float(config["algo"]["weight_decay"])},
             )
 
 
@@ -114,7 +116,7 @@ def main(config):
 
         #pdb.set_trace()
         
-        total_timesteps=5e6
+        total_timesteps=int(float(config["total_timesteps"]))
 
         
        
@@ -142,7 +144,7 @@ def main(config):
         else:
             model=SAC.load(config["resume"],device="cuda",env=vec_env)
 
-        total_timesteps=5e6
+        total_timesteps=int(float(config["total_timesteps"]))
     
     else:
         raise Exception("Unknown algo")
@@ -173,6 +175,8 @@ def main(config):
     num_params_learnable=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
     print(colored(f"num_total_params={num_params_total}","cyan",attrs=["bold"]))
     print(colored(f"num_learnable_params={num_params_learnable}","cyan",attrs=["bold"]))
+    print(model.policy.optimizer)
+    print(colored(f"total_timesteps={total_timesteps}","yellow"))
     #pdb.set_trace()    
     model.learn(total_timesteps=total_timesteps,callback=callback)
         
