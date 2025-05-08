@@ -72,7 +72,13 @@ class ReturnLoggingCallback(BaseCallback):
 def lr_schedule(progress_remaining):
 
     # progress_remaining goes from 1 (beginning) to 0 (end)
-    return 5e-5 * progress_remaining
+
+    if progress_remaining>0.8:
+        return 1e-4
+    elif progress_remaining<=0.8 and progress_remaining>0.6:
+        return 5e-5
+    else:
+        return 1e-5
 
 
 def main(config):

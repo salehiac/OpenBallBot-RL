@@ -38,12 +38,12 @@ def main(args):
             count=0
             while not done:
                 action, _ = model.predict(obs, deterministic=True)  # Use deterministic policy for testing
-                print(action)
+                #print(action)
                 obs, reward, done, truncated, info = env.step(action)
 
                 G_tau+=gamma**count*reward
                 count+=1
-                print(f'step={count}')
+                #print(f'step={count}')
 
 
             print("G_tau==",G_tau) 
