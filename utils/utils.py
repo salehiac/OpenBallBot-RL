@@ -12,7 +12,7 @@ def make_ballbot_env(
         gui=False,
         test_only=False,
         disable_cams=False,
-        seed=None):
+        seed=0):
     """
     goal_type can be 'fixed_pos', 'fixed_dir', 'rand_dir', 'rand_pos', 'stop'
     """
@@ -34,7 +34,6 @@ class SeedWrapper(gym.Wrapper):
 
     def reset(self,seed=None):
         if seed is None:
-            print(self._seed)
             return self.env.reset(seed=self._seed)
         return self.env.reset(seed=seed)
 

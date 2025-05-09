@@ -36,7 +36,7 @@ if __name__=="__main__":
             k_i=k_vals[1],
             k_d=k_vals[2])
     
-    obs, _=env.reset()
+    obs, _=env.reset(seed=0)
     
     G_tau=0
     gamma=0.999999

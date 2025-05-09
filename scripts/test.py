@@ -17,7 +17,6 @@ from utils import make_ballbot_env
 
 def main(args,seed=None):
 
-
     env=make_ballbot_env(gui=True,test_only=True,goal_type=args.goal_type,seed=seed)()
 
     with torch.no_grad():
@@ -32,7 +31,7 @@ def main(args,seed=None):
         print(colored(f"sum_of_model_params=={p_sum}","yellow"))
 
         for test_i in range(args.n_test):
-            obs, _ = env.reset()
+            obs, _ = env.reset(seed=seed+test_i)
             done = False
                
             G_tau=0
@@ -61,22 +60,20 @@ if __name__=="__main__":
     _parser.add_argument("--goal_type", type=str, help="either rand_dir, rand_pos, fixed_pos, fixed_dir or stop",required=True)
     _parser.add_argument("--path", type=str,help="path to policy")
     _parser.add_argument("--n_test", type=int,help="How many times to test policy",default=1)
+    _parser.add_argument("--seed", type=int,help="For repeatablility. If not set, will be chosen randomly",default=-1)
 
     _args = _parser.parse_args()
  
-    _seed=None
-    if 1:
-        _seed=10
-        random.seed(_seed)
-        np.random.seed(_seed)
-        torch.manual_seed(_seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    _seed=_args.seed if _args.seed!=-1 else np.random.randint(10000)
+    random.seed(_seed)
+    np.random.seed(_seed)
+    torch.manual_seed(_seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
         
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed(_seed)
-            torch.cuda.manual_seed_all(_seed)
-
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(_seed)
+    torch.cuda.manual_seed_all(_seed)
 
     _model=main(_args,seed=_seed)
 

@@ -6,15 +6,17 @@ import matplotlib.pyplot as plt
 import mujoco
 import mujoco.viewer
 
-from noise import pnoise2
+from noise import snoise2 #more coherent than pnoise2
+
+
 
 
 def generate_perlin_terrain(n,
-                            scale=12.0,
-                            octaves=6,
-                            persistence=0.4,
-                            lacunarity=2,
-                            seed=0):
+        scale=18.0,
+        octaves=4,
+        persistence=0.2,
+        lacunarity=2,
+        seed=0):
     """
     n                  grid size, should be odd
     """
@@ -24,7 +26,7 @@ def generate_perlin_terrain(n,
         for j in range(n):
             x = i / scale
             y = j / scale
-            terrain[i][j] = pnoise2(x,
+            terrain[i][j] = snoise2(x,
                                     y,
                                     octaves=octaves,
                                     persistence=persistence,
@@ -39,7 +41,7 @@ def generate_perlin_terrain(n,
     assert (terrain>=0).all()
     #plt.imshow(terrain)
     #plt.show()
-    
+   
     assert (terrain.flatten().reshape(n,n)==terrain).all()
     
     return terrain.flatten()
