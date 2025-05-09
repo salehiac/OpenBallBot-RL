@@ -11,7 +11,8 @@ def make_ballbot_env(
         goal_type,
         gui=False,
         test_only=False,
-        disable_cams=False):
+        disable_cams=False,
+        seed=None):
     """
     goal_type can be 'fixed_pos', 'fixed_dir', 'rand_dir', 'rand_pos', 'stop'
     """
@@ -21,8 +22,21 @@ def make_ballbot_env(
                 GUI=gui,#should be disabled in parallel training
                 goal_type=goal_type,
                 test_only=test_only)
+        if seed is not None:
+            env_s=SeedWrapper(env,seed=seed)
         return Monitor(env) #using a Monitor wrapper to enable logging rollout avg rewards 
     return _init
+
+class SeedWrapper(gym.Wrapper):
+    def __init__(self, env: gym.Env, seed: int):
+        super().__init__(env)
+        self._seed = seed
+
+    def reset(self,seed=None):
+        if seed is None:
+            print(self._seed)
+            return self.env.reset(seed=self._seed)
+        return self.env.reset(seed=seed)
 
 
 def deg2rad(d):

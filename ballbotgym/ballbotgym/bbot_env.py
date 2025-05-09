@@ -1,5 +1,6 @@
 import gymnasium as gym
 import numpy as np
+import random
 import argparse
 import pdb
 from typing import List
@@ -14,6 +15,7 @@ import string
 import re
 from functools import reduce
 from dataclasses import dataclass
+import shutil
 
 from termcolor import colored
 from scipy.linalg import logm
@@ -190,10 +192,8 @@ class BBotSimulation(gym.Env):
 
         self.passive_viewer=mujoco.viewer.launch_passive(self.model, self.data) if GUI else None
 
-        rand_str=''.join(np.random.permutation(list(string.ascii_letters + string.digits))[:12])
-        self.log_dir="/tmp/log_"+rand_str
-        os.mkdir(self.log_dir)
-
+       
+        self.log_dir=None #set in reset
         self.test_only=test_only
 
         self.max_abs_obs={x:-1 for x in ["orientation", "angular_vel", "vel", "pos"]}
@@ -203,7 +203,8 @@ class BBotSimulation(gym.Env):
         self.reward_term_2_hist=[]
         self.reward_term_3_hist=[]#constant for now
 
-        self.num_episodes=0
+        self.num_episodes=-1
+        self.np_seed=None
 
     def effective_camera_frame_rate(self):
 
@@ -249,7 +250,7 @@ class BBotSimulation(gym.Env):
             self.reward_hist=[]
             self.action_hist=[]
 
-        print("goal_2d==",self.goal_2d)
+        #print("goal_2d==",self.goal_2d)
 
     def _reset_terrain(self):
 
@@ -262,7 +263,9 @@ class BBotSimulation(gym.Env):
         sz=self.model.hfield_size[0,0]
         hfield_height_coef=self.model.hfield_size[0,2]
 
-        self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=np.random.randint(10000))
+        r_seed=self._np_random.integers(0,10000)
+        self.last_r_seed=r_seed
+        self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
         if self.passive_viewer is not None:
             self.passive_viewer.update_hfield(mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_HFIELD,"terrain"))
 
@@ -296,9 +299,9 @@ class BBotSimulation(gym.Env):
        
     def reset(self,seed=None,goal:str="random",**kwargs):
 
-        print("resetting_env...")
+        super().reset(seed=seed)#you should use self._np_random for any sort of sampling here, do **not** use np.random.rand() etc which uses the global rng state
 
-        super().reset(seed=seed)
+        #print(f"resetting_env, seed={seed}")
 
         self._reset_goal_and_reward_objs()
 
@@ -331,7 +334,19 @@ class BBotSimulation(gym.Env):
         self.G_tau=0.0
         self.num_episodes+=1
 
-        print(colored(f"effective_frame_rate=={self.effective_camera_frame_rate()}","cyan",attrs=["bold"]))
+        if self.num_episodes==0:
+            print(colored(f"effective_frame_rate=={self.effective_camera_frame_rate()}","cyan",attrs=["bold"]))
+
+
+        if self.log_dir is None:
+            rand_str=''.join(self._np_random.permutation(list(string.ascii_letters + string.digits))[:12])
+            self.log_dir="/tmp/log_"+rand_str
+            if os.path.exists(self.log_dir):
+                print(f"log_dir {self.log_dir} already exists. Overwriting!")
+                shutil.rmtree(self.log_dir)  
+            else:
+                print(f"Creating log_dir {self.log_dir}")
+            os.mkdir(self.log_dir)
 
         return obs, info
 
@@ -363,6 +378,9 @@ class BBotSimulation(gym.Env):
             if len(self.reward_term_1_hist):
                 np.save(self.log_dir+"/term_1",np.array(self.reward_term_1_hist))
                 np.save(self.log_dir+"/term_2",np.array(self.reward_term_2_hist))
+
+        with open(f"{self.log_dir}/terrain_seed_history", "a") as fl:
+            fl.write(f"{self.last_r_seed}\n")
 
 
     def _get_obs(self,last_ctrl):
@@ -618,9 +636,7 @@ def sample_direction_uniform(num=1):
     return np.concatenate([np.cos(t),np.sin(t)],1)
 
 
-
-
-
+    
 def main(args):
 
     sim=BBotSimulation(xml_path=args.xml_path,

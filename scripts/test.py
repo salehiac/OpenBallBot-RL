@@ -4,6 +4,8 @@ import json
 import pdb
 import torch
 import argparse
+import random
+import torch
 
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -13,10 +15,10 @@ from termcolor import colored
 sys.path.append("..")
 from utils import make_ballbot_env
 
-def main(args):
+def main(args,seed=None):
 
 
-    env=make_ballbot_env(gui=True,test_only=True,goal_type=args.goal_type)()
+    env=make_ballbot_env(gui=True,test_only=True,goal_type=args.goal_type,seed=seed)()
 
     with torch.no_grad():
         if args.algo=="ppo":
@@ -61,6 +63,20 @@ if __name__=="__main__":
     _parser.add_argument("--n_test", type=int,help="How many times to test policy",default=1)
 
     _args = _parser.parse_args()
-    _model=main(_args)
+ 
+    _seed=None
+    if 1:
+        _seed=10
+        random.seed(_seed)
+        np.random.seed(_seed)
+        torch.manual_seed(_seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(_seed)
+            torch.cuda.manual_seed_all(_seed)
 
+
+    _model=main(_args,seed=_seed)
 

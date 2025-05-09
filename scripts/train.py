@@ -4,7 +4,9 @@ import json
 import pdb
 import torch
 import random
+import os
 import argparse
+import shutil
 
 import yaml
 from stable_baselines3 import PPO, SAC
@@ -77,11 +79,13 @@ def lr_schedule(progress_remaining):
         return 1e-4
     elif progress_remaining<=0.8 and progress_remaining>0.6:
         return 5e-5
-    else:
+    elif progress_remaining<0.6 and progress_remaining>0.3:
         return 1e-5
+    else:
+        return 5e-6
 
 
-def main(config):
+def main(config,seed):
 
 
    
@@ -102,7 +106,7 @@ def main(config):
 
         N_ENVS = int(config["num_envs"])
 
-        vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"]) for _ in range(N_ENVS)])
+        vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],seed=seed) for _ in range(N_ENVS)])
 
         #even though stabe_baseline_3's PPO is primarily meant to run on cpu (per their documentation), the CNN runs like 10x times faster on GPU, so...
         device="cuda"
@@ -116,7 +120,8 @@ def main(config):
                     vf_coef=float(config["algo"]["vf_coef"]),
                     learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
                     policy_kwargs=policy_kwargs,
-                    n_steps=int(config["algo"]["n_steps"]))
+                    n_steps=int(config["algo"]["n_steps"]),
+                    seed=seed)
         else:
             model=PPO.load(config["resume"],device=device,env=vec_env)
 
@@ -146,7 +151,8 @@ def main(config):
                     ent_coef="auto_0.1",
                     #action_noise=vec_noise,
                     #policy_kwargs=policy_kwargs,
-                    device="cuda")
+                    device="cuda",
+                    seed=seed)
         else:
             model=SAC.load(config["resume"],device="cuda",env=vec_env)
 
@@ -154,6 +160,23 @@ def main(config):
     
     else:
         raise Exception("Unknown algo")
+
+    if os.path.exists(config['out']):
+        def confirm():
+            inpt=""
+            while inpt!='y' and inpt!='n':
+                inpt=input(colored(f"The output directory ({config['out']}) specified in your yaml file already exists. Overwrite? [y/N]: ","red")).strip().lower()
+
+            return inpt=='y'
+        if confirm():
+            shutil.rmtree(config["out"])  
+        else:
+            print(colored("Okay, aborted! Exiting.","red"))
+            os.exit(1)
+    
+    os.mkdir(config['out'])
+
+
 
 
     with open(f"{config['out']}/config.yaml","w") as fl:
@@ -215,6 +238,8 @@ if __name__=="__main__":
         from stable_baselines3.common.utils import set_random_seed
         set_random_seed(_seed)
     
-    main(_config)
+        main(_config,seed=_seed)
+    else:
+        raise Exception("nah you want this to be repeatable")
 
    
