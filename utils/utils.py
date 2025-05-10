@@ -12,7 +12,8 @@ def make_ballbot_env(
         gui=False,
         test_only=False,
         disable_cams=False,
-        seed=0):
+        seed=0,
+        log_options={"cams":False, "reward_terms":False}):
     """
     goal_type can be 'fixed_pos', 'fixed_dir', 'rand_dir', 'rand_pos', 'stop'
     """
@@ -21,7 +22,8 @@ def make_ballbot_env(
                 "ballbot-v0.1",
                 GUI=gui,#should be disabled in parallel training
                 goal_type=goal_type,
-                test_only=test_only)
+                test_only=test_only,
+                log_options=log_options)
         if seed is not None:
             env_s=SeedWrapper(env,seed=seed)
         return Monitor(env) #using a Monitor wrapper to enable logging rollout avg rewards 

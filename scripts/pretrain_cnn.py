@@ -36,6 +36,15 @@ class DepthImageDataset(Dataset):
         plt.imshow(im)
         plt.show()
 
+    def merge(self,other_ds):
+        """
+        merges two datasets
+        """
+
+        self.samples=self.samples+other_ds.samples
+
+        return self
+
 def collect_depth_image_paths(root_dir):
     """
     Collects paths to all depth images under the given root directory.
@@ -153,7 +162,7 @@ def train_autoencoder(model, train_loader, val_loader, device, epochs, lr, save_
                 loss = torch.nn.functional.mse_loss(out, x)
                 val_loss += loss.item() * x.size(0)
 
-                if epoch%5==0 and counter%100==0:
+                if epoch%10==0 and counter%100==0:
                     out_1=out[0,0].detach().cpu().numpy()
                     x_1=x[0,0].detach().cpu().numpy()
                     plt.imshow(np.concatenate([out_1,x_1],1))
@@ -172,6 +181,8 @@ def train_autoencoder(model, train_loader, val_loader, device, epochs, lr, save_
             best_val=val_loss
             torch.save(model.encoder,f"{save_path}/encoder_epoch_{epoch}")
 
+            torch.save(model,f"{save_path}/full_model_epoch_{epoch}")
+
 
 def main(args):
 
@@ -188,6 +199,8 @@ def main(args):
         image_data = load_depth_images(image_paths)
 
         dataset = DepthImageDataset(image_data)
+
+    #pdb.set_trace()
     
     val_ratio = 0.2
     val_size = int(len(dataset) * val_ratio)
@@ -206,7 +219,11 @@ def main(args):
     #print(len(dataset))
     #pdb.set_trace()
 
-    model=TinyAutoencoder(H=64,W=64)
+    if not args.from_model:
+        model=TinyAutoencoder(H=64,W=64)
+    else:
+        model=torch.load(args.from_model, weights_only=False)
+
     train_autoencoder(model,
             train_loader,
             val_loader,
@@ -221,6 +238,7 @@ if __name__=="__main__":
     _parser.add_argument("--data_path", type=str,required=True, help="Either a pkl file, or a directory that has the structure from the gather_data.py logging script")
     _parser.add_argument("--save_dataset_as_pickle", type=str,default="",help="an optional path where the dataset will be saved as a pkl")
     _parser.add_argument("--save_encoder_to",type=str, required=True, help="")
+    _parser.add_argument("--from_model",type=str,help="if supplied, training will start from that model",default="")
 
     _args = _parser.parse_args()
     main(_args)
