@@ -123,7 +123,26 @@ def main(config,seed):
                     n_steps=int(config["algo"]["n_steps"]),
                     seed=seed)
         else:
-            model=PPO.load(config["resume"],device=device,env=vec_env)
+            print(colored(f"loading model from {config['resume']}...", "yellow", attrs=["bold"]))
+
+            custom_objects=dict(
+                    ent_coef=float(config["algo"]["ent_coef"]),
+                    device=device,
+                    clip_range=float(config["algo"]["clip_range"]),
+                    vf_coef=float(config["algo"]["vf_coef"]),
+                    learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
+                    n_steps=int(config["algo"]["n_steps"]),
+                    seed=seed)
+
+            for k,v in custom_objects.items():
+                print(k,v)
+
+            #pdb.set_trace()
+            model=PPO.load(config["resume"],device=device,env=vec_env,custom_objects=custom_objects)
+
+            #for param_group in model.policy.optimizer.param_groups:
+            #    param_group['lr'] = float(config["algo"]["learning_rate"])
+
 
         #pdb.set_trace()
         

@@ -87,6 +87,8 @@ class Extractor(BaseFeaturesExtractor):
       
         #for k,v in encoded_tensor_dict.items():
         #    print(k,v)
+
+        #pdb.set_trace()
         return torch.cat(encoded_tensor_list, dim=1)
 
 class PID(Policy):
