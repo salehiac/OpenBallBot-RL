@@ -4,7 +4,7 @@
   <option cone="elliptic"/>
   <option integrator="RK4"/>
 
-  <visual><map znear="0.0001" zfar="150"/></visual>
+  <visual><map znear="0.0001" zfar="1.0"/></visual> <!-- Note that the actual far clipping plane is zfar*model.stats.extent. In the current settings, extent is ~14.14 (the documentation isn't clear on how this is computed) -->
 
 
   <asset>
@@ -46,13 +46,15 @@
       <geom name="tower_collision" type="cylinder"  size="0.11 0.14" pos="0 0 0.2" density="23.6" rgba="0.18 0.8 0.44 1.0"  /> 
       <geom name="ballast" type="box" size="0.1 0.1  0.1" rgba="0.5 0.5 0.0 0.5" density="400" pos="0 0 0.002" contype="0" conaffinity="0" group="3"/>   to lower center of mass
 
-      <body name="cam_0_body" pos="0.07 -0.01 0.06" euler="180 0 0">
+      <body name="cam_0_body" pos="0.17 -0.01 -0.06" euler="180 -30 0">
         <geom name="cam_0_geom" type="mesh" mesh="cone_mesh" rgba="1.0 1.0 0.0 1.0" density="1.0" pos="0 0 0"/>  
+        <geom name="cam_0_stick" type="capsule" fromto="0 0 0.0    -0.2 0 0" size="0.01 0.005" rgba="0 0 1 1"/>-->
         <camera name="cam_0" pos="0 0 0" euler="180 0 0" fovy="90"/>
       </body>
 
-      <body name="cam_1_body" pos="-0.06 -0.01 0.06" euler="180 0 0">
+      <body name="cam_1_body" pos="-0.17 -0.01 -0.06" euler="180 30 0">
         <geom name="cam_1_geom" type="mesh" mesh="cone_mesh" rgba="1.0 1.0 0.0 1.0" density="1.0" pos="0 0 0"/>  
+        <geom name="cam_1_stick" type="capsule" fromto="0 0 0.0    0.2 0 0" size="0.01 0.005" rgba="0 0 1 1"/>-->
         <camera name="cam_1" pos="0 0 0" euler="180 0 0" fovy="90"/>
       </body>
 

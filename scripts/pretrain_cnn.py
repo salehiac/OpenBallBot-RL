@@ -10,6 +10,7 @@ import sys
 import pdb
 import pickle
 import argparse
+from termcolor import colored
 
 
 class DepthImageDataset(Dataset):
@@ -162,7 +163,7 @@ def train_autoencoder(model, train_loader, val_loader, device, epochs, lr, save_
                 loss = torch.nn.functional.mse_loss(out, x)
                 val_loss += loss.item() * x.size(0)
 
-                if epoch%10==0 and counter%100==0:
+                if epoch%5==0 and counter%50==0:
                     out_1=out[0,0].detach().cpu().numpy()
                     x_1=x[0,0].detach().cpu().numpy()
                     plt.imshow(np.concatenate([out_1,x_1],1))
@@ -200,6 +201,7 @@ def main(args):
 
         dataset = DepthImageDataset(image_data)
 
+    print(colored(f"dataset contains {len(dataset)} depth images"))
     #pdb.set_trace()
     
     val_ratio = 0.2

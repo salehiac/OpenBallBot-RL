@@ -53,10 +53,14 @@ class RGBDInputs:
         if self._renderer_rgb is not None:
             self._renderer_rgb.update_scene(data, camera=cam_name)  
             rgb=self._renderer_rgb.render().astype(_default_dtype)/255
-        
+       
         self._renderer_d.update_scene(data, camera=cam_name)  
         
         depth=np.expand_dims(self._renderer_d.render(),axis=-1)
+
+        depth[depth>=1.0]=1.0#with robot orientations - especially near failure - the depth cameras might catch a glimpse of the sky which will return large values 
+                             #adjusting zfar in the xml is one solution, but since the actual clipping plane will be zfar*model.stats.extent, with the latter's computation not 
+                             #super transparent, I prefer to do some additional clipping here 
 
         #plt.imshow(rgb);plt.title(cam_name);plt.show()
         #plt.imshow(depth);plt.title(cam_name);plt.show()
@@ -104,7 +108,8 @@ class BBotSimulation(gym.Env):
             test_only=False,
             disable_cameras=False,
             depth_only=True,
-            log_options={"cams":False,"reward_terms":False}):
+            log_options={"cams":False,"reward_terms":False},
+            max_ep_steps=None):
         """
         goal_type can be 'fixed_pos', 'fixed_dir', 'rand_pos', 'rand_dir', 'stop'
         test_only just gathers some additional debug data - TODO: remove it, I guess?
@@ -113,7 +118,7 @@ class BBotSimulation(gym.Env):
 
         self.xml_path= xml_path
         self.goal_type=goal_type
-        self.max_ep_steps=2500
+        self.max_ep_steps=2500 if max_ep_steps is None else max_ep_steps
         self.camera_frame_rate=90#in Hz
         self.log_options=log_options
         self.depth_only=depth_only
@@ -266,6 +271,8 @@ class BBotSimulation(gym.Env):
         r_seed=self._np_random.integers(0,10000)
         self.last_r_seed=r_seed
         self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
+        #self.model.hfield_data=np.zeros(nrows**2)
+
         if self.passive_viewer is not None:
             self.passive_viewer.update_hfield(mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_HFIELD,"terrain"))
 
@@ -466,6 +473,10 @@ class BBotSimulation(gym.Env):
                 obs=obs_cur
             else:
                 obs={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl, "rgbd_0":rgbd_0.transpose(2,0,1), "rgbd_1":rgbd_1.transpose(2,0,1)}
+
+                #for k,v in obs.items():
+                #    print(k,v.dtype)
+                #pdb.set_trace()
         #print("obs==",obs)
         return obs
     

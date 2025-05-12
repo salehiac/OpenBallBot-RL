@@ -9,7 +9,7 @@ algo:
   n_steps: 2048 #n_steps means n_steps per env before update
   weight_decay: 0.01 #not part of standard PPO
 total_timesteps: 10e6
-frozen_cnn: "../encoder_frozen/encoder_epoch_38_pnoise_and_snoise"
+frozen_cnn: "../encoder_frozen/encoder_epoch_45_new_cams" #this model has been trained with snoise
 goal_type: fixed_dir
 hidden_sz: 128
 num_envs: 8

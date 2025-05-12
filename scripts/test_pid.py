@@ -27,7 +27,8 @@ if __name__=="__main__":
             "ballbot-v0.1",
             GUI=True,#full mujoco GUI
             goal_type="fixed_dir",#unusued for pid
-            log_options={"cams":True,"reward_terms":False})
+            log_options={"cams":True,"reward_terms":False},
+            max_ep_steps=25000)
     
     #k_vals=[20,5,2] #works for 1khz
     k_vals=[20,15,2] #better for 500hz, but not optimal
@@ -36,7 +37,7 @@ if __name__=="__main__":
             k_i=k_vals[1],
             k_d=k_vals[2])
     
-    obs, _=env.reset(seed=0)
+    obs, _=env.reset(seed=np.random.randint(1000))
     
     G_tau=0
     gamma=0.999999
