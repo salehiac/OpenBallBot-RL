@@ -40,7 +40,7 @@ class DirectionalReward(Reward):
         #rew=(1-coef)*dir_rew+coef*upright_rew
 
         rew=dir_rew
-        
+
         #print(f"dir_rew=={dir_rew},    upright_rew={upright_rew},    total_rew={rew}")
         return rew
 

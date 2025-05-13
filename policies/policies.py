@@ -33,30 +33,32 @@ class Extractor(BaseFeaturesExtractor):
                 if not frozen_encoder_path:
                     #note that we're iterating on observation_space objects, so there is not batch size info
                     C,H,W=subspace.shape #typically, C=1 and H=W=32 here
-                    F1=8
-                    F2=8
-                    out_sz=16
-                    extractors[key] = torch.nn.Sequential(
-                        torch.nn.Conv2d(1, F1, kernel_size=3, stride=2, padding=1), #output BxF1xH/2xW/2
-                        torch.nn.BatchNorm2d(F1),
-                        torch.nn.LeakyReLU(),
-                        torch.nn.Conv2d(F1, F2, kernel_size=3, stride=2, padding=1), #output BxF2xH/4xW/4
-                        torch.nn.BatchNorm2d(F2),
-                        torch.nn.LeakyReLU(),
-                        torch.nn.Flatten(),                                       
-                        torch.nn.Linear(F2*H//4*W//4, out_sz),                                  
-                        torch.nn.BatchNorm1d(out_sz),
-                        torch.nn.LeakyReLU(),
-                        )
 
-                    total_concat_size += 16
+                    F1=32
+                    F2=32
+                    self.out_sz=20
+                    self.encoder = torch.nn.Sequential(
+                            torch.nn.Conv2d(1, F1, kernel_size=3, stride=2, padding=1), #output BxF1xH/2xW/2
+                            torch.nn.BatchNorm2d(F1),
+                            torch.nn.LeakyReLU(),
+                            torch.nn.Conv2d(F1, F2, kernel_size=3, stride=2, padding=1), #output BxF2xH/4xW/4
+                            torch.nn.BatchNorm2d(F2),
+                            torch.nn.LeakyReLU(),
+                            torch.nn.Flatten(),                                       
+                            torch.nn.Linear(F2*H//4*W//4, self.out_sz),                                  
+                            torch.nn.BatchNorm1d(self.out_sz),
+                            torch.nn.Tanh(),
+                            )
+
+                    total_concat_size += self.out_sz
                 else:
                     print(f"loading encoder from {frozen_encoder_path}")
                     extractors[key]=torch.load(frozen_encoder_path,weights_only=False)
                     p_sum=sum([param.abs().sum().item() for param in extractors[key].parameters() if param.requires_grad])
                     assert p_sum==extractors[key].p_sum, "unexpected model params sum. The file might be corrupted"
                     last_linear = [m for m in extractors[key].modules() if isinstance(m, torch.nn.Linear)][-1]
-                    total_concat_size+=last_linear.out_features #in the current code, it is 16 anyway
+                    self.out_sz=last_linear.out_features 
+                    total_concat_size+=self.out_sz
 
                     for param in extractors[key].parameters():#to keep it frozen
                         param.requires_grad = False
@@ -75,21 +77,17 @@ class Extractor(BaseFeaturesExtractor):
     def forward(self, observations) -> torch.Tensor:
         encoded_tensor_list = []
         encoded_tensor_dict={}#for debug only
-
+        
         for key, extractor in self.extractors.items():
             cur=extractor(observations[key])
-            
-            #if "rgbd_" in key:
-            #    print(observations[key])
-            #encoded_tensor_dict[key]=cur
-            
-            encoded_tensor_list.append(cur)
-      
-        #for k,v in encoded_tensor_dict.items():
-        #    print(k,v)
+           
+            encoded_tensor_list.append(cur)#for rgbd_<int> the cnn uses a tanh at the end so no need for normalization
 
+            #encoded_tensor_dict[key]=cur
+      
         #pdb.set_trace()
-        return torch.cat(encoded_tensor_list, dim=1)
+        out=torch.cat(encoded_tensor_list, dim=1)
+        return out
 
 class PID(Policy):
     """

@@ -170,7 +170,7 @@ class BBotSimulation(gym.Env):
                 "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
                 "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
                 }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
+                    "orientation": gym.spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=_default_dtype),
                     "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
                     "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
                     "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
@@ -422,7 +422,7 @@ class BBotSimulation(gym.Env):
         body_id = self.model.body("base").id  
         position = self.data.xpos[body_id].copy().astype(_default_dtype)
         orientation = quaternion.quaternion(*self.data.xquat[body_id].copy())
-        rot_vec=quaternion.as_rotation_vector(orientation).astype(_default_dtype)
+        rot_vec=quaternion.as_rotation_vector(orientation).astype(_default_dtype)/np.pi #normalized in -1,1
 
         #angular velocities of joints
         motor_state=np.array([self.data.qvel[self.model.joint(f"wheel_joint_{motor_idx}").id] for motor_idx in range(3)]).astype(_default_dtype)

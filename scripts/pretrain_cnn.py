@@ -96,11 +96,11 @@ def load_depth_images(data_dict):
 
 
 class TinyAutoencoder(nn.Module):
-    def __init__(self,H,W,in_c=1,out_sz=16):
+    def __init__(self,H,W,in_c=1,out_sz=20):
         super().__init__()
 
-        F1=16
-        F2=16
+        F1=32
+        F2=32
         self.encoder = nn.Sequential(
                 torch.nn.Conv2d(1, F1, kernel_size=3, stride=2, padding=1), #output BxF1xH/2xW/2
                 torch.nn.BatchNorm2d(F1),
@@ -111,7 +111,7 @@ class TinyAutoencoder(nn.Module):
                 torch.nn.Flatten(),                                       
                 torch.nn.Linear(F2*H//4*W//4, out_sz),                                  
                 torch.nn.BatchNorm1d(out_sz),
-                torch.nn.LeakyReLU(),
+                torch.nn.Tanh(),
         )
 
         self.decoder = nn.Sequential(

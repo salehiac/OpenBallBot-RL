@@ -19,6 +19,7 @@ def main(args,seed=None):
 
     env=make_ballbot_env(gui=True,test_only=True,goal_type=args.goal_type,seed=seed)()
 
+    print(f"bbot mass is {sum(env.env.env.env.model.body_mass)}")
     with torch.no_grad():
         if args.algo=="ppo":
             model = PPO.load(args.path)
