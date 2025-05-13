@@ -199,7 +199,7 @@ def main(config,seed):
 
 
     with open(f"{config['out']}/config.yaml","w") as fl:
-        json.dump(config,fl)
+        yaml.dump(config,fl)
     with open(f"{config['out']}/info.txt","w") as fl:
         #for retrocompatibility
         json.dump({"algo": config["algo"]["name"], "num_envs": config["num_envs"] , "out": config["out"], "resume": config["resume"], "seed": config["seed"]},fl)
