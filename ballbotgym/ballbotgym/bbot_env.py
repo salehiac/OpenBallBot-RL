@@ -268,7 +268,10 @@ class BBotSimulation(gym.Env):
         sz=self.model.hfield_size[0,0]
         hfield_height_coef=self.model.hfield_size[0,2]
 
-        r_seed=self._np_random.integers(0,10000)
+        r_seed=self._np_random.integers(0,10000) if self._np_random is not None else np.random.randint(10000)
+        if self._np_random is None:
+            print("r_seed=",r_seed)
+
         self.last_r_seed=r_seed
         self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
         #self.model.hfield_data=np.zeros(nrows**2)
@@ -345,7 +348,7 @@ class BBotSimulation(gym.Env):
             print(colored(f"effective_frame_rate=={self.effective_camera_frame_rate()}","cyan",attrs=["bold"]))
 
 
-        if self.log_dir is None:
+        if self.log_dir is None and self._np_random:#if self._np_random is None, then we're being called from an EvalCallback and we don't want to log 
             rand_str=''.join(self._np_random.permutation(list(string.ascii_letters + string.digits))[:12])
             self.log_dir="/tmp/log_"+rand_str
             if os.path.exists(self.log_dir):
@@ -358,6 +361,9 @@ class BBotSimulation(gym.Env):
         return obs, info
 
     def _save_logs(self):
+
+        if self._np_random is None:
+            return
 
 
         if not self.disable_cameras and self.log_options["cams"]:

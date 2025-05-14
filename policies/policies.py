@@ -85,7 +85,6 @@ class Extractor(BaseFeaturesExtractor):
 
             #encoded_tensor_dict[key]=cur
       
-        #pdb.set_trace()
         out=torch.cat(encoded_tensor_list, dim=1)
         return out
 

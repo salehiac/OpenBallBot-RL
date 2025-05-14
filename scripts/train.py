@@ -11,7 +11,7 @@ import shutil
 import yaml
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
-from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
+from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 from stable_baselines3.common.noise import VectorizedActionNoise, NormalActionNoise
 from stable_baselines3.common.logger import configure
 from termcolor import colored
@@ -19,56 +19,6 @@ from termcolor import colored
 sys.path.append("..")
 from utils import make_ballbot_env
 import policies
-
-
-
-class ReturnLoggingCallback(BaseCallback):
-    def __init__(self, num_envs, log_dir, verbose=0):
-        super().__init__(verbose)
-        self.num_envs=num_envs
-        self.G_tau_lst=[0.0]*self.num_envs
-        self.gamma=0.9999#it's for logging, not very important 
-
-        self.full_episode_returns=[]
-        self.returns_report=[]
-
-        self.num_steps_total=0
-        self.steps_report=[]
-
-        self.log_dir=log_dir
-        self.best_mean_rew=-float("inf")
-
-    def _on_step(self):
-
-        for e_i in range(self.num_envs):
-            rew=self.locals["rewards"][e_i]
-            env_steps=self.locals["infos"][e_i]["step_counter"]
-            self.G_tau_lst[e_i]+=(self.gamma**env_steps)*rew
-            if self.locals["dones"][e_i]:
-                self.full_episode_returns.append(self.G_tau_lst[e_i])
-                self.G_tau_lst[e_i]=0.0
-
-            self.num_steps_total+=1
-
-        while len(self.full_episode_returns)>=self.num_envs:
-            avg_ret=np.mean(self.full_episode_returns[:self.num_envs])
-            self.full_episode_returns=self.full_episode_returns[self.num_envs:]
-            self.returns_report.append(avg_ret)
-            self.steps_report.append(self.num_steps_total)
-
-        with open(self.log_dir+"/G_tau_lst","w") as fl:
-            json.dump({"avg_returns":self.returns_report,"total_steps":self.steps_report},fl)
-
-        return True
-
-    def _on_rollout_end(self):
-
-        rb=self.locals["rollout_buffer"]
-        mean_reward=rb.rewards.mean()#bb.rewards is of shame n_steps*num_envs for ppo
-
-        if mean_reward > self.best_mean_rew:
-                self.best_mean_rew= mean_reward
-                self.model.save(self.log_dir+"/best_agent")
 
 
 def lr_schedule(progress_remaining):
@@ -106,7 +56,10 @@ def main(config,seed):
 
         N_ENVS = int(config["num_envs"])
 
-        vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],seed=seed) for _ in range(N_ENVS)])
+        vec_env  = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],seed=seed) for _ in range(N_ENVS)])
+        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],seed=seed+1) for _ in range(N_ENVS)])
+
+
 
         #even though stabe_baseline_3's PPO is primarily meant to run on cpu (per their documentation), the CNN runs like 10x times faster on GPU, so...
         device="cuda"
@@ -209,10 +162,20 @@ def main(config,seed):
     logger= configure(logger_path, ["stdout", "csv"])
     model.set_logger(logger)
 
+    eval_callback = EvalCallback(
+            eval_env,
+            best_model_save_path=f'{config["out"]}/best_model',
+            log_path=f"{config['out']}/results/",
+            eval_freq=5000,
+            n_eval_episodes=1,
+            deterministic=True,
+            render=False,
+            )
+
     callback = CallbackList([
-        ReturnLoggingCallback(N_ENVS,log_dir=f"{config['out']}/"),
+        eval_callback,
         CheckpointCallback(
-            save_freq=1000 if config["algo"]["name"]!="ppo" else 10000,
+            save_freq=1000 if config["algo"]["name"]!="ppo" else 20000,
             save_path=f"{config['out']}/checkpoints/", 
             name_prefix=f"{config['algo']['name']}_agent"     
             )
