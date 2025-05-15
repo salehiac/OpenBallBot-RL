@@ -3,12 +3,13 @@ algo:
   ent_coef: 0.01
   clip_range: 0.1
   vf_coef: 2.0
-  #learning_rate: 1e-4
-  learning_rate: 5e-5
+  learning_rate: 1e-4
+  #learning_rate: 1e-5
   #learning_rate: -1 #this turns on scheduler
-  n_steps: 2048 #n_steps means n_steps per env before update
+  n_steps: 1024 #n_steps means n_steps per env before update
   weight_decay: 0.01 #not part of standard PPO
   n_epochs: 10
+  batch_sz: 256
 total_timesteps: 10e6
 frozen_cnn: "../encoder_frozen/encoder_epoch_53" #this model has been trained with snoise
 goal_type: fixed_dir

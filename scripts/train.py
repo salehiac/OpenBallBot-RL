@@ -34,6 +34,12 @@ def lr_schedule(progress_remaining):
     else:
         return 5e-6
 
+def confirm(question):
+    inpt=""
+    while inpt!='y' and inpt!='n':
+        inpt=input(question+" [y/N]: ").strip().lower()
+    return inpt=='y'
+
 
 def main(config,seed):
 
@@ -74,6 +80,7 @@ def main(config,seed):
                     learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
                     policy_kwargs=policy_kwargs,
                     n_steps=int(config["algo"]["n_steps"]),
+                    batch_size=int(config["algo"]["batch_sz"]),
                     n_epochs=int(config["algo"]["n_epochs"]),
                     seed=seed)
         else:
@@ -145,17 +152,11 @@ def main(config,seed):
         raise Exception("Unknown algo")
 
     if os.path.exists(config['out']):
-        def confirm():
-            inpt=""
-            while inpt!='y' and inpt!='n':
-                inpt=input(colored(f"The output directory ({config['out']}) specified in your yaml file already exists. Overwrite? [y/N]: ","red")).strip().lower()
-
-            return inpt=='y'
-        if confirm():
+        if confirm(colored(f"The output directory ({config['out']}) specified in your yaml file already exists. Overwrite?","red",attrs=["bold"])):
             shutil.rmtree(config["out"])  
         else:
             print(colored("Okay, aborted! Exiting.","red"))
-            os.exit(1)
+            os._exit(1)
     
     os.mkdir(config['out'])
 
@@ -200,6 +201,14 @@ def main(config,seed):
         print(colored(f"num_learnable_params={num_params_learnable}","cyan",attrs=["bold"]))
         print(model.policy.optimizer)
         print(colored(f"total_timesteps={total_timesteps}","yellow"))
+        num_updates_per_rollout=(config["algo"]["n_epochs"]*config["num_envs"]*config["algo"]["n_steps"])/config["algo"]["batch_sz"]
+        if not confirm(colored(f"the current config results in {num_updates_per_rollout} number of updates per rollout. Continue? ","green",attrs=["bold"])):
+            print("Aborting.")
+            os._exit(1)
+        else:
+            print("Okay.")
+
+        
     #pdb.set_trace()    
     model.learn(total_timesteps=total_timesteps,callback=callback)
         
