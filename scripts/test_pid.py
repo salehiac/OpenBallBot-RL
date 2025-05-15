@@ -28,7 +28,8 @@ if __name__=="__main__":
             GUI=True,#full mujoco GUI
             goal_type="fixed_dir",#unusued for pid
             log_options={"cams":True,"reward_terms":False},
-            max_ep_steps=25000)
+            max_ep_steps=25000,
+            terrain_type="flat")
     
     #k_vals=[20,5,2] #works for 1khz
     k_vals=[20,15,2] #better for 500hz, but not optimal

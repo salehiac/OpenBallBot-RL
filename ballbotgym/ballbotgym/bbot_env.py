@@ -109,16 +109,23 @@ class BBotSimulation(gym.Env):
             disable_cameras=False,
             depth_only=True,
             log_options={"cams":False,"reward_terms":False},
-            max_ep_steps=None):
+            max_ep_steps=None,
+            terrain_type:str="perlin"):
         """
         goal_type can be 'fixed_pos', 'fixed_dir', 'rand_pos', 'rand_dir', 'stop'
         test_only just gathers some additional debug data - TODO: remove it, I guess?
+        terrain_type ca be "perlin", "bands", "flat"
         """
         super().__init__()
 
-        self.xml_path= xml_path
+        assert terrain_type in ["perlin", "bands", "flat"], "unknown terrain type"
+        self.terrain_type=terrain_type
+        if terrain_type=="bands":
+            self.xml_path=xml_path[:-4]+"_bands.xml"
+        else:
+            self.xml_path= xml_path 
         self.goal_type=goal_type
-        self.max_ep_steps=2500 if max_ep_steps is None else max_ep_steps
+        self.max_ep_steps=4000 if max_ep_steps is None else max_ep_steps
         self.camera_frame_rate=90#in Hz
         self.log_options=log_options
         self.depth_only=depth_only
@@ -268,13 +275,29 @@ class BBotSimulation(gym.Env):
         sz=self.model.hfield_size[0,0]
         hfield_height_coef=self.model.hfield_size[0,2]
 
-        r_seed=self._np_random.integers(0,10000) if self._np_random is not None else np.random.randint(10000)
-        if self._np_random is None:
-            print("r_seed=",r_seed)
+        if self.terrain_type=="perlin":
+            r_seed=self._np_random.integers(0,10000) if self._np_random is not None else np.random.randint(10000)
+            if self._np_random is None:
+                print("r_seed=",r_seed)
 
-        self.last_r_seed=r_seed
-        self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
-        #self.model.hfield_data=np.zeros(nrows**2)
+            self.last_r_seed=r_seed
+            self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
+        elif self.terrain_type=="bands":
+            num_bands=3
+            max_angle=30
+            alphas=(self._np_random.random(num_bands)-0.5)*2*max_angle if self._np_random is not None else (np.random.rand(num_bands)-0.5)*2*max_angle
+            print("alphas==",alphas)
+            #alphas=[15,-15,25]
+            terr=terrain.generate_banded(nrows,alphas=alphas,d=1)
+            #plt.plot(terr)
+            #plt.axis("equal")
+            #plt.show()
+            ratio=sz/nrows
+            self.model.hfield_data=terr*ratio
+        elif self.terrain_type=="flat":
+            self.model.hfield_data=np.zeros(nrows**2)
+        else:
+            raise Exception("unknown terrain type")
 
         if self.passive_viewer is not None:
             self.passive_viewer.update_hfield(mujoco.mj_name2id(self.model,mujoco.mjtObj.mjOBJ_HFIELD,"terrain"))
@@ -392,8 +415,9 @@ class BBotSimulation(gym.Env):
                 np.save(self.log_dir+"/term_1",np.array(self.reward_term_1_hist))
                 np.save(self.log_dir+"/term_2",np.array(self.reward_term_2_hist))
 
-        with open(f"{self.log_dir}/terrain_seed_history", "a") as fl:
-            fl.write(f"{self.last_r_seed}\n")
+        if self.terrain_type=="perlin":
+            with open(f"{self.log_dir}/terrain_seed_history", "a") as fl:
+                fl.write(f"{self.last_r_seed}\n")
 
 
     def _get_obs(self,last_ctrl):

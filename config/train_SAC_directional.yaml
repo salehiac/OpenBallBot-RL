@@ -3,6 +3,8 @@ algo:
   learning_rate: 1e-4
   action_noise_sigma: 0.1
   weight_decay: 0.01 #not part of standard PPO
+problem:
+  terrain_type: "bands" #options are "bands", "perlin", "flat"
 total_timesteps: 10e6
 frozen_cnn: "../encoder_frozen/encoder_epoch_53" #this model has been trained with snoise
 goal_type: fixed_dir

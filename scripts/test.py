@@ -17,9 +17,7 @@ from utils import make_ballbot_env
 
 def main(args,seed=None):
 
-    env=make_ballbot_env(gui=True,test_only=True,goal_type=args.goal_type,seed=seed)()
 
-    print(f"bbot mass is {sum(env.env.env.env.model.body_mass)}")
     with torch.no_grad():
         if args.algo=="ppo":
             model = PPO.load(args.path)
@@ -27,6 +25,13 @@ def main(args,seed=None):
             model=SAC.load(args.path)
         else:
             raise Exception("unknown algo")
+        
+        env=make_ballbot_env(gui=True,
+                test_only=True,
+                goal_type=args.goal_type,
+                terrain_type=model.terrain_type if not args.override_terrain_type else args.override_terrain_type,
+                seed=seed)()
+        print(f"bbot mass is {sum(env.env.env.env.model.body_mass)}")
 
         p_sum=sum([param.abs().sum().item() for param in model.policy.parameters() if param.requires_grad])
         print(colored(f"sum_of_model_params=={p_sum}","yellow"))
@@ -62,6 +67,7 @@ if __name__=="__main__":
     _parser.add_argument("--path", type=str,help="path to policy")
     _parser.add_argument("--n_test", type=int,help="How many times to test policy",default=1)
     _parser.add_argument("--seed", type=int,help="For repeatablility. If not set, will be chosen randomly",default=-1)
+    _parser.add_argument("--override_terrain_type", type=str,default="", help="Can be used to run the policy on a terrain type it hasn't been trained on. See the ballbot env for options.")
 
     _args = _parser.parse_args()
  

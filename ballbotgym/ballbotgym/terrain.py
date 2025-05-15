@@ -9,6 +9,58 @@ import mujoco.viewer
 from noise import snoise2 #more coherent than pnoise2
 
 
+def generate_banded(
+    n,
+    alphas:list,#in degrees
+    d=10,
+    flatten=True):
+
+    terrain_list=[]
+    num_slopes=len(alphas)
+
+    prev_x=n//2
+    prev_h=0
+
+    band_sz=(n//2)//num_slopes
+
+    terrain_strip=np.zeros(n)
+
+    for s_i in range(num_slopes):
+
+        alpha_rad=alphas[s_i]*np.pi/180.0
+
+        x1=prev_x+d
+        h1=prev_h
+
+        x2=n//2+(s_i+1)*band_sz-d
+        r=(x2-x1)/np.cos(alpha_rad)
+        h2=r*np.sin(alpha_rad)
+
+        a=(h1-h2)/(x1-x2)
+        b=h1-a*x1
+
+        for xx in range(x1,x2+1):
+            terrain_strip[xx]=a*xx+b
+        terrain_strip[x2+1:x2+d]=h2
+
+        prev_x=x2
+        prev_h=h2
+
+   
+    terrain_strip[prev_x:]=prev_h
+    #plt.plot(terrain_strip)
+    #plt.axis("equal")
+    #plt.grid("on")
+    #plt.show()
+
+    terrain=terrain_strip.reshape(-1,1).repeat(n,axis=-1)
+    
+    #plt.imshow(terrain)
+    #plt.show()
+
+    return terrain.flatten() if flatten else terrain
+
+
 
 
 def generate_perlin_terrain(n,

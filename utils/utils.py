@@ -9,6 +9,7 @@ import ballbotgym
 
 def make_ballbot_env(
         goal_type,
+        terrain_type,
         gui=False,
         test_only=False,
         disable_cams=False,
@@ -23,7 +24,8 @@ def make_ballbot_env(
                 GUI=gui,#should be disabled in parallel training
                 goal_type=goal_type,
                 test_only=test_only,
-                log_options=log_options)
+                log_options=log_options,
+                terrain_type=terrain_type)
         if seed is not None:
             env_s=SeedWrapper(env,seed=seed)
         return Monitor(env) #using a Monitor wrapper to enable logging rollout avg rewards 
