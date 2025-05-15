@@ -37,7 +37,7 @@ class Extractor(BaseFeaturesExtractor):
                     F1=32
                     F2=32
                     self.out_sz=20
-                    self.encoder = torch.nn.Sequential(
+                    extractors[key] = torch.nn.Sequential(
                             torch.nn.Conv2d(1, F1, kernel_size=3, stride=2, padding=1), #output BxF1xH/2xW/2
                             torch.nn.BatchNorm2d(F1),
                             torch.nn.LeakyReLU(),
