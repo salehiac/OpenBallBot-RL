@@ -39,6 +39,8 @@ class DirectionalReward(Reward):
         #coef=0.7#should be in [0,1]
         #rew=(1-coef)*dir_rew+coef*upright_rew
 
+        #vel_magintude=np.linalg.norm(state["vel"][-3:-1])
+        #rew=dir_rew-0.2*vel_magintude
         rew=dir_rew
 
         #print(f"dir_rew=={dir_rew},    upright_rew={upright_rew},    total_rew={rew}")

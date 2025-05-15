@@ -58,7 +58,7 @@ def plot_train_val_reward_progress(csv_file):
         manager = plt.get_current_fig_manager()
         manager.full_screen_toggle()
         plt.grid("on")
-        plt.legend(fontsize=_legent_fs)
+        plt.legend(fontsize=_legent_fs,loc="upper left")
         plt.show()
 
 

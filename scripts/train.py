@@ -41,7 +41,6 @@ def main(config,seed):
    
     if config["algo"]["name"]=="ppo":
 
-
         policy_kwargs = dict(
             activation_fn=torch.nn.LeakyReLU,
             net_arch=dict(
@@ -54,6 +53,7 @@ def main(config,seed):
             )
 
 
+       
         N_ENVS = int(config["num_envs"])
 
         vec_env  = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],seed=seed) for _ in range(N_ENVS)])
@@ -74,6 +74,7 @@ def main(config,seed):
                     learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
                     policy_kwargs=policy_kwargs,
                     n_steps=int(config["algo"]["n_steps"]),
+                    n_epochs=int(config["algo"]["n_epochs"]),
                     seed=seed)
         else:
             print(colored(f"loading model from {config['resume']}...", "yellow", attrs=["bold"]))
@@ -107,11 +108,21 @@ def main(config,seed):
 
         N_ENVS = int(config["num_envs"])
         vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"]) for _ in range(N_ENVS)])
+        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],seed=seed+1) for _ in range(N_ENVS)])
 
-        #policy_kwargs = dict(net_arch=dict(
-        #    activation_fn=torch.nn.LeakyReLU,
-        #    pi=[config["hidden_sz"], config["hidden_sz"]],
-        #    qf=[config["hidden_sz"], config["hidden_sz"]]))
+
+        policy_kwargs = dict(
+            activation_fn=torch.nn.LeakyReLU,
+            net_arch=dict(
+                pi=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]],
+                qf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
+            features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
+            features_extractor_kwargs={"frozen_encoder_path":config["frozen_cnn"]},
+            optimizer_class=torch.optim.AdamW,
+            optimizer_kwargs={"weight_decay":float(config["algo"]["weight_decay"])},
+            )
+
+
 
         normal_noise=NormalActionNoise(np.zeros(3),np.ones(3)*float(config["algo"]["action_noise_sigma"]))
         vec_noise=VectorizedActionNoise(normal_noise,N_ENVS)
@@ -122,7 +133,7 @@ def main(config,seed):
                     learning_rate=float(config["algo"]["learning_rate"]),
                     ent_coef="auto_0.1",
                     #action_noise=vec_noise,
-                    #policy_kwargs=policy_kwargs,
+                    policy_kwargs=policy_kwargs,
                     device="cuda",
                     seed=seed)
         else:
@@ -166,8 +177,8 @@ def main(config,seed):
             eval_env,
             best_model_save_path=f'{config["out"]}/best_model',
             log_path=f"{config['out']}/results/",
-            eval_freq=5000,
-            n_eval_episodes=1,
+            eval_freq=5000 if config["algo"]["name"]=="ppo" else 500,
+            n_eval_episodes=8,
             deterministic=True,
             render=False,
             )
@@ -175,19 +186,20 @@ def main(config,seed):
     callback = CallbackList([
         eval_callback,
         CheckpointCallback(
-            save_freq=1000 if config["algo"]["name"]!="ppo" else 20000,
+            20000,
             save_path=f"{config['out']}/checkpoints/", 
             name_prefix=f"{config['algo']['name']}_agent"     
             )
         ])
 
-    print(model.policy)
-    num_params_total=sum([param.numel() for param in model.policy.parameters()])
-    num_params_learnable=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
-    print(colored(f"num_total_params={num_params_total}","cyan",attrs=["bold"]))
-    print(colored(f"num_learnable_params={num_params_learnable}","cyan",attrs=["bold"]))
-    print(model.policy.optimizer)
-    print(colored(f"total_timesteps={total_timesteps}","yellow"))
+    if config["algo"]["name"]=="ppo":
+        print(model.policy)
+        num_params_total=sum([param.numel() for param in model.policy.parameters()])
+        num_params_learnable=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
+        print(colored(f"num_total_params={num_params_total}","cyan",attrs=["bold"]))
+        print(colored(f"num_learnable_params={num_params_learnable}","cyan",attrs=["bold"]))
+        print(model.policy.optimizer)
+        print(colored(f"total_timesteps={total_timesteps}","yellow"))
     #pdb.set_trace()    
     model.learn(total_timesteps=total_timesteps,callback=callback)
         
