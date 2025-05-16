@@ -562,10 +562,10 @@ class BBotSimulation(gym.Env):
         self.reward_term_1_hist.append(reward)
         
         #pdb.set_trace() 
-        #action_regularization=-0.001*(np.linalg.norm(omniwheel_commands)**2)
+        action_regularization=-0.001*(np.linalg.norm(omniwheel_commands)**2)
         #print(action_regularization)
         #self.reward_term_2_hist.append(action_regularization)
-        #reward+=action_regularization
+        reward+=action_regularization
      
         if self.passive_viewer:
 
@@ -636,7 +636,7 @@ class BBotSimulation(gym.Env):
             #early_fail_penalty=-1.0
             #reward+=early_fail_penalty
         else:
-            reward+=0.01
+            reward+=0.02
 
         gamma=1.0#not used algorithmically here anyway
         self.G_tau+=(gamma**self.step_counter)*reward
@@ -649,16 +649,15 @@ class BBotSimulation(gym.Env):
                 #remove this?
                 pass
                 if 0:
-                    aa=np.concatenate(self.action_hist,0)
-                    plt.plot(aa[:,0],"r")
-                    plt.plot(aa[:,1],"g")
-                    plt.plot(aa[:,2],"b")
-                    #plt.plot(self.reward_hist,"b")
+                    #aa=np.concatenate(self.action_hist,0)
+                    #plt.plot(aa[:,0],"r")
+                    #plt.plot(aa[:,1],"g")
+                    #plt.plot(aa[:,2],"b")
+                    plt.plot(self.reward_hist,"b")
+                    #plt.plot(self.reward_term_1_hist,"r")#this one keeps all episodes
+                    #plt.plot(self.reward_term_2_hist,"g")#this one also keeps rewards from all episodes
                     plt.show()
 
-                    plt.plot(self.reward_term_1_hist,"r")
-                    plt.plot(self.reward_term_2_hist,"g")
-                    plt.show()
 
 
         if self.test_only:
