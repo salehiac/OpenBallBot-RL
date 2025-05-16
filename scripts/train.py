@@ -142,6 +142,8 @@ def main(config,seed):
                     #action_noise=vec_noise,
                     policy_kwargs=policy_kwargs,
                     device="cuda",
+                    batch_size=config["algo"]["batch_size"],
+                    buffer_size=config["algo"]["buffer_size"],
                     seed=seed)
         else:
             model=SAC.load(config["resume"],device="cuda",env=vec_env)
