@@ -11,7 +11,7 @@ algo:
   n_epochs: 10
   batch_sz: 256
 problem:
-  terrain_type: "bands" #options are "bands", "perlin", "flat"
+  terrain_type: "perlin" #options are "bands", "perlin", "flat"
 total_timesteps: 10e6
 #frozen_cnn: "../encoder_frozen/encoder_epoch_53" #this model has been trained with snoise
 frozen_cnn: ""

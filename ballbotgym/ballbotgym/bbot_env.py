@@ -512,7 +512,7 @@ class BBotSimulation(gym.Env):
                         "actions": last_ctrl,
                         "rgbd_0":rgbd_0.transpose(2,0,1),
                         "rgbd_1":rgbd_1.transpose(2,0,1),
-                        "relative_image_timestamp": np.array([delta_time]).astype(_default_dtype),
+                        "relative_image_timestamp": np.array([self.data.time-self.prev_im_pair.ts]).astype(_default_dtype),
                         }
 
                 #for k,v in obs.items():
