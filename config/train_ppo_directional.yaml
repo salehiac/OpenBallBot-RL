@@ -14,11 +14,9 @@ problem:
   terrain_type: "perlin" #options are "bands", "perlin", "flat"
 total_timesteps: 10e6
 frozen_cnn: "../encoder_frozen/encoder_epoch_53" #this model has been trained with snoise
-frozen_cnn: ""
 goal_type: fixed_dir
 hidden_sz: 256
 num_envs: 8
-#resume: "./log_resume/best_model/best_model.zip"
 resume: ""
 out: ./log
 seed: 10
