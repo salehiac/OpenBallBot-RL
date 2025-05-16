@@ -283,12 +283,12 @@ class BBotSimulation(gym.Env):
             self.last_r_seed=r_seed
             self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
         elif self.terrain_type=="bands":
-            num_bands=3
-            max_angle=30
+            num_bands=1
+            max_angle=20
             alphas=(self._np_random.random(num_bands)-0.5)*2*max_angle if self._np_random is not None else (np.random.rand(num_bands)-0.5)*2*max_angle
             print("alphas==",alphas)
             #alphas=[15,-15,25]
-            terr=terrain.generate_banded(nrows,alphas=alphas,d=1)
+            terr=terrain.generate_banded(nrows,alphas=alphas,d=1,start_from=0)
             #plt.plot(terr)
             #plt.axis("equal")
             #plt.show()
@@ -551,10 +551,10 @@ class BBotSimulation(gym.Env):
         self.reward_term_1_hist.append(reward)
         
         #pdb.set_trace() 
-        action_regularization=-0.001*(np.linalg.norm(omniwheel_commands)**2)
+        #action_regularization=-0.001*(np.linalg.norm(omniwheel_commands)**2)
         #print(action_regularization)
-        self.reward_term_2_hist.append(action_regularization)
-        reward+=action_regularization
+        #self.reward_term_2_hist.append(action_regularization)
+        #reward+=action_regularization
      
         if self.passive_viewer:
 
@@ -633,6 +633,7 @@ class BBotSimulation(gym.Env):
             print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
             self._save_logs()
             print(colored(f"Episode took {self.data.time} in simulation time","magenta",attrs=["bold"]))
+            #self.reward_obj.plot()
             if self.test_only:
                 #remove this?
                 pass

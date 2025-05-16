@@ -32,6 +32,11 @@ def main(args,seed=None):
                 terrain_type=model.terrain_type if not args.override_terrain_type else args.override_terrain_type,
                 seed=seed)()
         print(f"bbot mass is {sum(env.env.env.env.model.body_mass)}")
+        if args.override_terrain_type:
+            print(colored(f"policy was trained on terrain type {model.terrain_type}, but it will be tested on terrain type {args.override_terrain_type}","yellow",attrs=["bold"]))
+        else:
+            print(colored(f"policy was trained on terrain type {model.terrain_type} and will be tested on the same terrain type.", "yellow",attrs=["bold"]))
+
 
         p_sum=sum([param.abs().sum().item() for param in model.policy.parameters() if param.requires_grad])
         print(colored(f"sum_of_model_params=={p_sum}","yellow"))

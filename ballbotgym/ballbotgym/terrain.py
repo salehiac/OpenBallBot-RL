@@ -13,15 +13,19 @@ def generate_banded(
     n,
     alphas:list,#in degrees
     d=10,
-    flatten=True):
+    flatten=True,
+    start_from=None,
+    show=False):
 
     terrain_list=[]
     num_slopes=len(alphas)
 
-    prev_x=n//2
+    prev_x=n//2 if start_from is None else start_from
     prev_h=0
 
-    band_sz=(n//2)//num_slopes
+    band_sz=(n//2)//num_slopes if start_from is None else n//num_slopes
+
+    print(band_sz)
 
     terrain_strip=np.zeros(n)
 
@@ -32,7 +36,7 @@ def generate_banded(
         x1=prev_x+d
         h1=prev_h
 
-        x2=n//2+(s_i+1)*band_sz-d
+        x2=start_from+(s_i+1)*band_sz-d
         r=(x2-x1)/np.cos(alpha_rad)
         h2=r*np.sin(alpha_rad)
 
@@ -48,15 +52,17 @@ def generate_banded(
 
    
     terrain_strip[prev_x:]=prev_h
-    #plt.plot(terrain_strip)
-    #plt.axis("equal")
-    #plt.grid("on")
-    #plt.show()
 
     terrain=terrain_strip.reshape(-1,1).repeat(n,axis=-1)
-    
-    #plt.imshow(terrain)
-    #plt.show()
+
+
+    if show:
+        plt.plot(terrain_strip)
+        plt.axis("equal")
+        plt.grid("on")
+        plt.show()
+        #plt.imshow(terrain)
+        #plt.show()
 
     return terrain.flatten() if flatten else terrain
 
@@ -97,3 +103,11 @@ def generate_perlin_terrain(n,
     assert (terrain.flatten().reshape(n,n)==terrain).all()
     
     return terrain.flatten()
+
+if __name__=="__main__":
+
+    _max_angle=20
+    _num_bands=5
+    _alphas=(np.random.rand(_num_bands)-0.5)*2*_max_angle
+    terr=generate_banded(n=273,alphas=_alphas,d=1,start_from=0,show=True)
+

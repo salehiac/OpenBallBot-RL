@@ -55,8 +55,8 @@ def plot_train_val_reward_progress(csv_file):
         plt.ylabel(f'Mean reward \n(average over last N environments)', fontsize=_fontsize_labels)
         plt.tick_params(axis='both', labelsize=_fontsize_ticks)
         
-        manager = plt.get_current_fig_manager()
-        manager.full_screen_toggle()
+        #manager = plt.get_current_fig_manager()
+        #manager.full_screen_toggle()
         plt.grid("on")
         plt.legend(fontsize=_legent_fs,loc="upper left")
         plt.show()

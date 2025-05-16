@@ -1,8 +1,8 @@
 algo:
   name: ppo 
-  ent_coef: 0.0005
+  ent_coef: 0.02
   clip_range: 0.1
-  vf_coef: 2.0
+  vf_coef: 0.3
   #learning_rate: 1e-4
   learning_rate: 5e-5
   #learning_rate: -1 #this turns on scheduler
