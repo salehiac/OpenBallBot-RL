@@ -53,16 +53,18 @@ class DirectionalReward(Reward):
         #self.vel_history.append(vel_magintude)
         #self.overshoot_history.append(overshoot)
         ################################################################################################ orientattion penalty
-        roll=state["orientation"][-2]
-        yaw=state["orientation"][-1]
-        orientation_mag2=roll**2+yaw**2
-        print("orien==",state["orientation"])
-        self.orientation_mag_hist.append(orientation_mag2)
-        orientation_coef=1.0
+        #roll=state["orientation"][-2]
+        #yaw=state["orientation"][-1]
+        #orientation_mag2=roll**2+yaw**2
+        ##print("orien==",state["orientation"])
+        #self.orientation_mag_hist.append(orientation_mag2)
+        #orientation_coef=1.0
 
 
         ################################################################################################ summing up
-        rew=dir_rew - orientation_coef*orientation_mag2
+        #rew=dir_rew - orientation_coef*orientation_mag2
+
+        rew=dir_rew
 
 
         #print(f"dir_rew=={dir_rew},    upright_rew={upright_rew},    total_rew={rew}")
