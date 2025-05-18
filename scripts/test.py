@@ -30,6 +30,7 @@ def main(args,seed=None):
                 test_only=True,
                 goal_type=args.goal_type,
                 terrain_type=model.terrain_type if not args.override_terrain_type else args.override_terrain_type,
+                log_options={"cams":False, "reward_terms":True},
                 seed=seed)()
         print(f"bbot mass is {sum(env.env.env.env.model.body_mass)}")
         if args.override_terrain_type:

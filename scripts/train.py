@@ -70,19 +70,25 @@ def main(config,seed):
         #even though stabe_baseline_3's PPO is primarily meant to run on cpu (per their documentation), the CNN runs like 10x times faster on GPU, so...
         device="cuda"
         if not config["resume"]:
+
+            normalize_advantage=bool(config["algo"]["normalize_advantage"])
             model = PPO("MultiInputPolicy", 
                     vec_env,
                     verbose=1,
                     ent_coef=float(config["algo"]["ent_coef"]),
                     device=device,
                     clip_range=float(config["algo"]["clip_range"]),
+                    target_kl=float(config["algo"]["target_kl"]),
                     vf_coef=float(config["algo"]["vf_coef"]),
                     learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
                     policy_kwargs=policy_kwargs,
                     n_steps=int(config["algo"]["n_steps"]),
                     batch_size=int(config["algo"]["batch_sz"]),
                     n_epochs=int(config["algo"]["n_epochs"]),
+                    normalize_advantage=normalize_advantage,
                     seed=seed)
+
+            #pdb.set_trace()
         else:
             print(colored(f"loading model from {config['resume']}...", "yellow", attrs=["bold"]))
 

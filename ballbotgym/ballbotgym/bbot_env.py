@@ -285,7 +285,7 @@ class BBotSimulation(gym.Env):
             self.last_r_seed=r_seed
             self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
         elif self.terrain_type=="bands":
-            num_bands=1
+            num_bands=10
             max_angle=20
             alphas=(self._np_random.random(num_bands)-0.5)*2*max_angle if self._np_random is not None else (np.random.rand(num_bands)-0.5)*2*max_angle
             print("alphas==",alphas)
@@ -562,9 +562,9 @@ class BBotSimulation(gym.Env):
         self.reward_term_1_hist.append(reward)
         
         #pdb.set_trace() 
-        action_regularization=-0.001*(np.linalg.norm(omniwheel_commands)**2)
+        action_regularization=-0.0001*(np.linalg.norm(omniwheel_commands)**2)
         #print(action_regularization)
-        #self.reward_term_2_hist.append(action_regularization)
+        self.reward_term_2_hist.append(action_regularization)
         reward+=action_regularization
      
         if self.passive_viewer:

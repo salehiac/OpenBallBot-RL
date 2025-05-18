@@ -70,7 +70,7 @@ def generate_banded(
 
 
 def generate_perlin_terrain(n,
-        scale=18.0,
+        scale=40.0,
         octaves=4,
         persistence=0.2,
         lacunarity=2,
@@ -101,6 +101,12 @@ def generate_perlin_terrain(n,
     #plt.show()
    
     assert (terrain.flatten().reshape(n,n)==terrain).all()
+
+
+    #d=5
+    #center=n//2
+    #mm=terrain[center-d:center+d,center-d:center+d].mean()
+    #terrain[center-d:center+d,center-d:center+d]=mm
     
     return terrain.flatten()
 

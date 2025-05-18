@@ -97,22 +97,25 @@ def plot_loss_evolutions(csv_file, config_file):
     ent_coef=config["algo"]["ent_coef"]
     val_coef=config["algo"]["vf_coef"]
 
-
-    plt.plot([x*ent_coef for x in progress_data["train/entropy_loss"]],"r",label="entropy")
+    #plt.plot([x*ent_coef for x in progress_data["train/entropy_loss"]],"r",label="entropy")
+    plt.plot([x for x in progress_data["train/entropy_loss"]],"r",label="entropy")
     plt.legend(fontsize=18)
     plt.show()
     plt.plot(progress_data["train/policy_gradient_loss"],"g",label="pg loss")
     plt.legend(fontsize=18)
     plt.show()
-    plt.plot([x*val_coef for x in progress_data["train/value_loss"]],"b",label="value loss")
+    #plt.plot([x*val_coef for x in progress_data["train/value_loss"]],"b",label="value loss")
+    plt.plot([x for x in progress_data["train/value_loss"]],"b",label="value loss")
     plt.legend(fontsize=18)
     plt.legend(fontsize=18)
     plt.show()
 
 
-    plt.plot([x*ent_coef for x in progress_data["train/entropy_loss"]],"r",label="entropy")
+    #plt.plot([x*ent_coef for x in progress_data["train/entropy_loss"]],"r",label="entropy")
+    plt.plot([x for x in progress_data["train/entropy_loss"]],"r",label="entropy")
     plt.plot(progress_data["train/policy_gradient_loss"],"g",label="pg loss")
-    plt.plot([x*val_coef for x in progress_data["train/value_loss"]],"b",label="value loss")
+    #plt.plot([x*val_coef for x in progress_data["train/value_loss"]],"b",label="value loss")
+    plt.plot([x for x in progress_data["train/value_loss"]],"b",label="value loss")
     plt.legend(fontsize=18)
     plt.show()
 
