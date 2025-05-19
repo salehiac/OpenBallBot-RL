@@ -16,7 +16,7 @@ _linewidth=8
 _legent_fs=20
 
 
-def plot_train_val_reward_progress(csv_file):
+def plot_train_val_progress(csv_file):
 
     with open(csv_file, newline='') as csvfile:
         first_line = csvfile.readline()
@@ -32,14 +32,18 @@ def plot_train_val_reward_progress(csv_file):
                 continue #because the first log is always missing some info
 
             eval_val=row["eval/mean_reward"]
+            eval_ep_len=row["eval/mean_ep_length"]
             rollout_val=row["rollout/ep_rew_mean"]
+            rollout_ep_len=row["rollout/ep_len_mean"]
             total_timesteps=row["time/total_timesteps"]
 
             if eval_val!="":#it's an eval episode and there wont be any rollout values
                 data["eval/mean_reward"].append(float(eval_val))
+                data["eval/mean_ep_length"].append(float(eval_ep_len))
                 data["eval_domain"].append(float(total_timesteps))
             else:
                 data["rollout/ep_rew_mean"].append(float(rollout_val))
+                data["rollout/mean_ep_length"].append(float(rollout_ep_len))
                 data["rollout_domain"].append(float(total_timesteps))
 
             row_counter+=1
@@ -47,7 +51,8 @@ def plot_train_val_reward_progress(csv_file):
         progress_data=dict(data)
         #pdb.set_trace()
 
-        
+       
+        #plot rewards
         plt.plot(progress_data["rollout_domain"],progress_data["rollout/ep_rew_mean"],linewidth=_linewidth,label="train")
         plt.plot(progress_data["eval_domain"],progress_data["eval/mean_reward"],linewidth=_linewidth,label="eval")
         #plt.xlabel('Environment timesteps (millions)', fontsize=_fontsize_labels)
@@ -60,6 +65,22 @@ def plot_train_val_reward_progress(csv_file):
         plt.grid("on")
         plt.legend(fontsize=_legent_fs,loc="upper left")
         plt.show()
+
+
+        #plot ep_len
+        plt.plot(progress_data["rollout_domain"],progress_data["rollout/mean_ep_length"],linewidth=_linewidth,label="train")
+        plt.plot(progress_data["eval_domain"],progress_data["eval/mean_ep_length"],linewidth=_linewidth,label="eval")
+        #plt.xlabel('Environment timesteps (millions)', fontsize=_fontsize_labels)
+        plt.xlabel('Environment timesteps', fontsize=_fontsize_labels)
+        plt.ylabel(f'Average episode length \n(over last N environments)', fontsize=_fontsize_labels)
+        plt.tick_params(axis='both', labelsize=_fontsize_ticks)
+        
+        #manager = plt.get_current_fig_manager()
+        #manager.full_screen_toggle()
+        plt.grid("on")
+        plt.legend(fontsize=_legent_fs,loc="upper left")
+        plt.show()
+
 
 
 
@@ -130,6 +151,6 @@ if __name__=="__main__":
     _args = _parser.parse_args()
 
 
-    plot_train_val_reward_progress(_args.csv)
+    plot_train_val_progress(_args.csv)
     plot_loss_evolutions(_args.csv,_args.config)
 
