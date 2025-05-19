@@ -1,7 +1,7 @@
 algo:
   name: ppo 
   ent_coef: 0.001
-  clip_range: 0.02
+  clip_range: 0.015
   target_kl: 0.3
   vf_coef: 2.0
   #learning_rate: 1e-4

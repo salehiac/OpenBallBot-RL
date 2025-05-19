@@ -523,7 +523,8 @@ class BBotSimulation(gym.Env):
     
     def _get_info(self):
         
-        info={"success":False,"failure":False,"step_counter":self.step_counter}
+        position = self.data.xpos[self.model.body("base").id].copy().astype(_default_dtype)
+        info={"success":False,"failure":False,"step_counter":self.step_counter, "pos2d":position[:-1]}
 
         return info
    
@@ -572,7 +573,8 @@ class BBotSimulation(gym.Env):
              
             with self.passive_viewer.lock():
 
-                if self.goal_type in ["rand_dir", "fixed_dir"]:
+                #if self.goal_type in ["rand_dir", "fixed_dir"]:
+                if 0:
                     self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
                     factor=20#just for display
                     hh=0.5

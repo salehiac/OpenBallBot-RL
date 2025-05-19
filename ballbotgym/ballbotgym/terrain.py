@@ -70,7 +70,7 @@ def generate_banded(
 
 
 def generate_perlin_terrain(n,
-        scale=40.0,
+        scale=25.0,
         octaves=4,
         persistence=0.2,
         lacunarity=2,

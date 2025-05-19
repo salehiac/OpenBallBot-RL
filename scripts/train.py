@@ -25,10 +25,12 @@ def lr_schedule(progress_remaining):
 
     # progress_remaining goes from 1 (beginning) to 0 (end)
 
-    if progress_remaining>0.73:
+    if progress_remaining>0.7:
         return 1e-4
-    else:
+    elif progress_remaining <0.7 and progress_remaining>0.5:
         return 5e-5
+    else:
+        return 1e-5
 
 def confirm(question):
     inpt=""
