@@ -1,5 +1,13 @@
 # Reinforcmenet Learning for Ballbot control in uneven terrain
 
+This repo contains the mujoco-based ballbot simulation as well as the RL code to reproduce the navigation results from the paper
+
+```
+<add citation>
+```
+
+Here are some navigation examples from a trained policy:
+
 
 <p float="left">
   <img src="/images/episode_1.gif" width="32.0%" />
@@ -7,11 +15,6 @@
   <img src="/images/episode_3.gif" width="32.0%" />
 </p>
 
-This repo contains the mujoco-based ballbot simulation as well as the RL code to reproduce the navigation results from the paper
-
-```
-<add citation>
-```
 
 ## Warning!
 
