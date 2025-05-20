@@ -16,6 +16,7 @@ Here are some navigation examples from a trained policy on *randomly sampled* un
   <img src="/images/episode_4.gif" width="29.0%" />
 </p>
 
+Note that in the above, eval episodes `1, 2, 3` are `4000` timesteps long, while episode `4` is `10000` steps long. The policy has been trained with a maximum of `4000` steps, therefore, this last evaluationcan bee seen as a demonstration of generalization capability.
 
 ## Warning!
 
