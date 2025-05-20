@@ -102,10 +102,8 @@ class BBotSimulation(gym.Env):
 
     def __init__(self,
             xml_path,
-            goal_type:str,
             GUI=False,#full mujoco gui
             im_shape={"h":64,"w":64},
-            test_only=False,
             disable_cameras=False,
             depth_only=True,
             log_options={"cams":False,"reward_terms":False},
@@ -113,85 +111,38 @@ class BBotSimulation(gym.Env):
             terrain_type:str="perlin",
             eval_env=[False,None]):
         """
-        goal_type can be 'fixed_pos', 'fixed_dir', 'rand_pos', 'rand_dir', 'stop'
-        test_only just gathers some additional debug data - TODO: remove it, I guess?
-        terrain_type ca be "perlin", "bands", "flat"
+        terrain_type ca be "perlin", "flat"
         """
         super().__init__()
 
-        assert terrain_type in ["perlin", "bands", "flat"], "unknown terrain type"
         self.terrain_type=terrain_type
-        if terrain_type=="bands":
-            self.xml_path=xml_path[:-4]+"_bands.xml"
-        else:
-            self.xml_path= xml_path 
-        self.goal_type=goal_type
+        
+        self.xml_path= xml_path 
         self.max_ep_steps=4000 if max_ep_steps is None else max_ep_steps
         self.camera_frame_rate=90#in Hz
         self.log_options=log_options
         self.depth_only=depth_only
 
         self.action_space=gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype)
-        if goal_type=="fixed_pos":#uses position
 
-            num_channels=1 if self.depth_only else 4
-            self.observation_space=gym.spaces.Dict({
-                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
-                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
-                "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=_default_dtype),
-                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
-                }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
-                    "pos": gym.spaces.Box(low=-float("inf"),high=float("inf"), shape=(3,), dtype=_default_dtype),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
-                    })
-
-        elif goal_type=="rand_dir":#no position, goal conditioned instead
-
-            num_channels=1 if self.depth_only else 4
-            self.observation_space=gym.spaces.Dict({
-                "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
-                "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
-                "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=_default_dtype),
-                "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(im_shape["h"],im_shape["w"], num_channels), dtype=_default_dtype),
-                }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=_default_dtype),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
-                    "goal": gym.spaces.Box(low=-1.0,high=1.0, shape=(2,), dtype=_default_dtype),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
-                    })
-
-        elif goal_type=="fixed_dir":#no position, and no need for goal conditioning
-
-            num_channels=1 if self.depth_only else 4
-            self.observation_space=gym.spaces.Dict({
+        num_channels=1 if self.depth_only else 4
+        self.observation_space=gym.spaces.Dict({
+            "orientation": gym.spaces.Box(low=-np.pi, high=np.pi, shape=(3,), dtype=_default_dtype),
+            "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
+            "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
+            "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
+            "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype),
+            "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
+            "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
+            "relative_image_timestamp": gym.spaces.Box(low=0.0, high=0.1, shape=(1,), dtype=_default_dtype),#the lag between high-frequencey proprio and low-freq cams
+            }) if not disable_cameras else gym.spaces.Dict({
                 "orientation": gym.spaces.Box(low=-np.pi, high=np.pi, shape=(3,), dtype=_default_dtype),
                 "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
                 "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
                 "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
                 "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype),
-                "rgbd_0": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
-                "rgbd_1": gym.spaces.Box(low=0.0, high=1.0, shape=(num_channels, im_shape["h"], im_shape["w"]), dtype=_default_dtype),
                 "relative_image_timestamp": gym.spaces.Box(low=0.0, high=0.1, shape=(1,), dtype=_default_dtype),#the lag between high-frequencey proprio and low-freq cams
-                }) if not disable_cameras else gym.spaces.Dict({
-                    "orientation": gym.spaces.Box(low=-np.pi, high=np.pi, shape=(3,), dtype=_default_dtype),
-                    "angular_vel": gym.spaces.Box(low=-2, high=2, shape=(3,), dtype=_default_dtype),
-                    "vel": gym.spaces.Box(low=-2,high=2, shape=(3,), dtype=_default_dtype),
-                    "motor_state": gym.spaces.Box(-2.0,2.0,shape=(3,),dtype=_default_dtype),
-                    "actions": gym.spaces.Box(-1.0,1.0,shape=(3,),dtype=_default_dtype),
-                    "relative_image_timestamp": gym.spaces.Box(low=0.0, high=0.1, shape=(1,), dtype=_default_dtype),#the lag between high-frequencey proprio and low-freq cams
-                    })
-
-        elif goal_type=="stop" or goal_type=="rand_pos": 
-            
-            raise Exception("not implemented yet")
-        else: 
-            raise Exception("unknown goal type {goal_type}")
+                })
 
         self.model=mujoco.MjModel.from_xml_path(self.xml_path)
         self.data = mujoco.MjData(self.model)
@@ -209,12 +160,11 @@ class BBotSimulation(gym.Env):
 
        
         self.log_dir=None #set in reset
-        self.test_only=test_only
 
         self.max_abs_obs={x:-1 for x in ["orientation", "angular_vel", "vel", "pos"]}
 
 
-        self.reward_term_1_hist=[]#
+        self.reward_term_1_hist=[]
         self.reward_term_2_hist=[]
         self.reward_term_3_hist=[]#constant for now
 
@@ -223,6 +173,8 @@ class BBotSimulation(gym.Env):
 
         if self.eval_env:
             self._np_random, _ = gym.utils.seeding.np_random(eval_env[1])
+
+        self.verbose=False
 
     def effective_camera_frame_rate(self):
 
@@ -243,32 +195,9 @@ class BBotSimulation(gym.Env):
 
     def _reset_goal_and_reward_objs(self):
         
-        if self.goal_type=="rand_dir":
-                
-            self.goal_2d=sample_direction_uniform(num=1).reshape(2)
-            self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
 
-        elif self.goal_type=="fixed_dir":
-
-            self.goal_2d=[0.0, 1.0]
-            self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
-        
-        elif self.goal_type=="fixed_pos":
-
-            #we can learn a policy that pivots the robot in the desired direction so that the relative goal remains the same, hence the possibility of a fixed reward 
-            self.goal_2d=[0.0, 0.5]
-            self.reward_obj=Rewards.FixedReward(self.goal_2d[1])
-            #self.reward_obj.plot_reward()
-
-        else:
-            raise Exception("unknown goal type")
-
-
-        if self.test_only:
-            self.reward_hist=[]
-            self.action_hist=[]
-
-        #print("goal_2d==",self.goal_2d)
+        self.goal_2d=[0.0, 1.0]
+        self.reward_obj=Rewards.DirectionalReward(target_direction=self.goal_2d)
 
     def _reset_terrain(self):
 
@@ -287,18 +216,6 @@ class BBotSimulation(gym.Env):
 
             self.last_r_seed=r_seed
             self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
-        elif self.terrain_type=="bands":
-            num_bands=10
-            max_angle=20
-            alphas=(self._np_random.random(num_bands)-0.5)*2*max_angle 
-            print("alphas==",alphas)
-            #alphas=[15,-15,25]
-            terr=terrain.generate_banded(nrows,alphas=alphas,d=1,start_from=0)
-            #plt.plot(terr)
-            #plt.axis("equal")
-            #plt.show()
-            ratio=sz/nrows
-            self.model.hfield_data=terr*ratio
         elif self.terrain_type=="flat":
             self.model.hfield_data=np.zeros(nrows**2)
         else:
@@ -488,40 +405,22 @@ class BBotSimulation(gym.Env):
             angular_vel=np.zeros_like(rot_vec)
         self.prev_orientation=orientation.copy()
 
-        if self.goal_type=="fixed_pos":
-            if self.disable_cameras:
-                obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel}
-            else:
-                obs={"orientation":rot_vec, "angular_vel": angular_vel, "pos":position, "vel":vel, "rgbd_0":rgbd_0, "rgbd_1": rgbd_1}
+        
+        if self.disable_cameras:
+            obs_cur={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl}
+            obs=obs_cur
+        else:
+            obs={
+                    "orientation":rot_vec,
+                    "angular_vel": angular_vel,
+                    "vel":vel,
+                    "motor_state": motor_state,
+                    "actions": last_ctrl,
+                    "rgbd_0":rgbd_0.transpose(2,0,1),
+                    "rgbd_1":rgbd_1.transpose(2,0,1),
+                    "relative_image_timestamp": np.array([self.data.time-self.prev_im_pair.ts]).astype(_default_dtype),
+                    }
 
-        elif self.goal_type=="rand_dir":
-
-            if self.disable_cameras:
-                obs={"orientation":rot_vec, "angular_vel": angular_vel, "goal":self.goal_2d, "vel":vel}
-            else:
-                raise Exception("this is not handled yet")
-
-        elif self.goal_type=="fixed_dir":
-            
-            if self.disable_cameras:
-                obs_cur={"orientation":rot_vec, "angular_vel": angular_vel, "vel":vel, "motor_state": motor_state, "actions": last_ctrl}
-                obs=obs_cur
-            else:
-                obs={
-                        "orientation":rot_vec,
-                        "angular_vel": angular_vel,
-                        "vel":vel,
-                        "motor_state": motor_state,
-                        "actions": last_ctrl,
-                        "rgbd_0":rgbd_0.transpose(2,0,1),
-                        "rgbd_1":rgbd_1.transpose(2,0,1),
-                        "relative_image_timestamp": np.array([self.data.time-self.prev_im_pair.ts]).astype(_default_dtype),
-                        }
-
-                #for k,v in obs.items():
-                #    print(k,v.dtype)
-                #pdb.set_trace()
-        #print("obs==",obs)
         return obs
     
     def _get_info(self):
@@ -546,9 +445,6 @@ class BBotSimulation(gym.Env):
         #print("ctrl==",ctrl)
         ctrl=np.clip(ctrl,a_min=-10,a_max=10)#in case of pid issues
 
-        if self.test_only:
-            self.action_hist.append(ctrl.reshape(1,3))
-       
         self.data.ctrl[:] = - ctrl
         mujoco.mj_step(self.model, self.data)
         
@@ -560,14 +456,11 @@ class BBotSimulation(gym.Env):
         terminated=False
         truncated=False
 
-        reward=self.reward_obj(obs)#note that failure penalties are added later
-        reward= reward/1000 if self.goal_type=="rand_dir" else reward/100 if self.goal_type=="fixed_dir" else reward/100 #normalization to get better gradients
+        reward=self.reward_obj(obs)/100#regularization and survival are added later
 
         self.reward_term_1_hist.append(reward)
         
-        #pdb.set_trace() 
         action_regularization=-0.0001*(np.linalg.norm(omniwheel_commands)**2)
-        #print(action_regularization)
         self.reward_term_2_hist.append(action_regularization)
         reward+=action_regularization
      
@@ -576,7 +469,6 @@ class BBotSimulation(gym.Env):
              
             with self.passive_viewer.lock():
 
-                #if self.goal_type in ["rand_dir", "fixed_dir"]:
                 if 0:
                     self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
                     factor=20#just for display
@@ -595,25 +487,7 @@ class BBotSimulation(gym.Env):
                             width=200,
                             from_=[0,0,hh],
                             to=[self.goal_2d[0]*factor,self.goal_2d[1]*factor,hh])
-                elif self.goal_type=="fixed_pos":
-                    self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
-                    mujoco.mjv_initGeom(
-                            self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
-                            type=mujoco.mjtGeom.mjGEOM_SPHERE,
-                            size=[0.01]*3,
-                            pos=[self.goal_2d[0],self.goal_2d[1],0.0],
-                            mat=np.eye(3).flatten(),
-                            rgba=[1, 0, 1, 1])
-
-                    mujoco.mjv_connector(
-                            self.passive_viewer.user_scn.geoms[self.passive_viewer.user_scn.ngeom-1],
-                            type=mujoco.mjtGeom.mjGEOM_LINE,
-                            width=10,
-                            from_=[self.goal_2d[0],self.goal_2d[1],0],
-                            to=[self.goal_2d[0],self.goal_2d[1],0.8])
  
-
-
             self.passive_viewer.sync()
 
         self.prev_data_time=self.data.time#to detect resets that happen in GUI
@@ -633,41 +507,22 @@ class BBotSimulation(gym.Env):
         max_allowed_tilt=20
         early_fail_penalty=0.0
         if angle_in_degrees>max_allowed_tilt:
-            print(f"failure after {self.step_counter}. Reason: tilte_angle > {max_allowed_tilt} ")
+
+            if self.verbose:
+                print(f"failure after {self.step_counter}. Reason: tilt_angle > {max_allowed_tilt} ")
 
             info["success"]=False
             info["failure"]=True
             terminated=True
-            #early_fail_penalty=-1.0
-            #reward+=early_fail_penalty
         else:
             reward+=0.02
 
         gamma=1.0#not used algorithmically here anyway
         self.G_tau+=(gamma**self.step_counter)*reward
         if terminated:
-            print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
+            if self.verbose:
+                print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
             self._save_logs()
-            print(colored(f"Episode took {self.data.time} in simulation time","magenta",attrs=["bold"]))
-            #self.reward_obj.plot()
-            if self.test_only:
-                #remove this?
-                pass
-                if 0:
-                    #aa=np.concatenate(self.action_hist,0)
-                    #plt.plot(aa[:,0],"r")
-                    #plt.plot(aa[:,1],"g")
-                    #plt.plot(aa[:,2],"b")
-                    plt.plot(self.reward_hist,"b")
-                    #plt.plot(self.reward_term_1_hist,"r")#this one keeps all episodes
-                    #plt.plot(self.reward_term_2_hist,"g")#this one also keeps rewards from all episodes
-                    plt.show()
-
-
-
-        if self.test_only:
-            self.reward_hist.append(reward)
-
 
         return obs, reward, terminated, truncated, info
 
@@ -692,8 +547,6 @@ def sample_direction_uniform(num=1):
     t=np.random.rand(num).reshape(num,1)*2*np.pi
     return np.concatenate([np.cos(t),np.sin(t)],1)
 
-
-    
 def main(args):
 
     sim=BBotSimulation(xml_path=args.xml_path,
@@ -705,15 +558,3 @@ def main(args):
 
         obs, reward, terminated, _, info=sim.step(sim.action_space.sample())
 
-
-
-
-
-if __name__=="__main__":
-
-    _parser = argparse.ArgumentParser(description="bbotgym test")
-    _parser.add_argument("--xml_path", type=str)
-    _parser.add_argument("--gui", action="store_true")
-
-    _args = _parser.parse_args()
-    main(_args)

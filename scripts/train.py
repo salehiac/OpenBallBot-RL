@@ -9,7 +9,7 @@ import argparse
 import shutil
 
 import yaml
-from stable_baselines3 import PPO, SAC
+from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 from stable_baselines3.common.noise import VectorizedActionNoise, NormalActionNoise
@@ -38,125 +38,67 @@ def confirm(question):
         inpt=input(question+" [y/N]: ").strip().lower()
     return inpt=='y'
 
-
 def main(config,seed):
 
 
-   
-    if config["algo"]["name"]=="ppo":
 
-        policy_kwargs = dict(
-            activation_fn=torch.nn.LeakyReLU,
-            net_arch=dict(
-                pi=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]],
-                vf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
-            features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
-            features_extractor_kwargs={"frozen_encoder_path":config["frozen_cnn"]},
-            optimizer_class=torch.optim.AdamW,
-            optimizer_kwargs={"weight_decay":float(config["algo"]["weight_decay"])},
-            )
+    policy_kwargs = dict(
+        activation_fn=torch.nn.LeakyReLU,
+        net_arch=dict(
+            pi=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]],
+            vf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
+        features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
+        features_extractor_kwargs={"frozen_encoder_path":config["frozen_cnn"]},
+        optimizer_class=torch.optim.AdamW,
+        optimizer_kwargs={"weight_decay":float(config["algo"]["weight_decay"])},
+        )
 
 
-       
-        N_ENVS = int(config["num_envs"])
+    N_ENVS = int(config["num_envs"])
 
-        vec_env  = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed) for _ in range(N_ENVS)])
-        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed+N_ENVS+env_i,eval_env=True) for env_i in range(N_ENVS)])
+    vec_env  = SubprocVecEnv([make_ballbot_env(terrain_type=config["problem"]["terrain_type"],seed=seed) for _ in range(N_ENVS)])
+    eval_env = SubprocVecEnv([make_ballbot_env(terrain_type=config["problem"]["terrain_type"],seed=seed+N_ENVS+env_i,eval_env=True) for env_i in range(N_ENVS)])
 
+    device="cuda"
+    if not config["resume"]:
 
+        normalize_advantage=bool(config["algo"]["normalize_advantage"])
+        model = PPO("MultiInputPolicy", 
+                vec_env,
+                verbose=1,
+                ent_coef=float(config["algo"]["ent_coef"]),
+                device=device,
+                clip_range=float(config["algo"]["clip_range"]),
+                target_kl=float(config["algo"]["target_kl"]),
+                vf_coef=float(config["algo"]["vf_coef"]),
+                learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
+                policy_kwargs=policy_kwargs,
+                n_steps=int(config["algo"]["n_steps"]),
+                batch_size=int(config["algo"]["batch_sz"]),
+                n_epochs=int(config["algo"]["n_epochs"]),
+                normalize_advantage=normalize_advantage,
+                seed=seed)
 
-        #even though stabe_baseline_3's PPO is primarily meant to run on cpu (per their documentation), the CNN runs like 10x times faster on GPU, so...
-        device="cuda"
-        if not config["resume"]:
-
-            normalize_advantage=bool(config["algo"]["normalize_advantage"])
-            model = PPO("MultiInputPolicy", 
-                    vec_env,
-                    verbose=1,
-                    ent_coef=float(config["algo"]["ent_coef"]),
-                    device=device,
-                    clip_range=float(config["algo"]["clip_range"]),
-                    target_kl=float(config["algo"]["target_kl"]),
-                    vf_coef=float(config["algo"]["vf_coef"]),
-                    learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
-                    policy_kwargs=policy_kwargs,
-                    n_steps=int(config["algo"]["n_steps"]),
-                    batch_size=int(config["algo"]["batch_sz"]),
-                    n_epochs=int(config["algo"]["n_epochs"]),
-                    normalize_advantage=normalize_advantage,
-                    seed=seed)
-
-            #pdb.set_trace()
-        else:
-            print(colored(f"loading model from {config['resume']}...", "yellow", attrs=["bold"]))
-
-            custom_objects=dict(
-                    ent_coef=float(config["algo"]["ent_coef"]),
-                    device=device,
-                    clip_range=float(config["algo"]["clip_range"]),
-                    vf_coef=float(config["algo"]["vf_coef"]),
-                    learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
-                    n_steps=int(config["algo"]["n_steps"]),
-                    seed=seed)
-
-            for k,v in custom_objects.items():
-                print(k,v)
-
-            #pdb.set_trace()
-            model=PPO.load(config["resume"],device=device,env=vec_env,custom_objects=custom_objects)
-
-            #for param_group in model.policy.optimizer.param_groups:
-            #    param_group['lr'] = float(config["algo"]["learning_rate"])
-
-
-        #pdb.set_trace()
-        
-        total_timesteps=int(float(config["total_timesteps"]))
-
-        
-       
-    elif config["algo"]["name"]=="sac":
-
-        N_ENVS = int(config["num_envs"])
-        vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed) for _ in range(N_ENVS)])
-        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed+N_ENVS+env_i,eval_env=True) for env_i in range(N_ENVS)])
-
-
-        policy_kwargs = dict(
-            activation_fn=torch.nn.LeakyReLU,
-            net_arch=dict(
-                pi=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]],
-                qf=[config["hidden_sz"], config["hidden_sz"], config["hidden_sz"], config["hidden_sz"]]),
-            features_extractor_class=policies.Extractor,#note that this will be shared by the policy and the value networks
-            features_extractor_kwargs={"frozen_encoder_path":config["frozen_cnn"]},
-            optimizer_class=torch.optim.AdamW,
-            optimizer_kwargs={"weight_decay":float(config["algo"]["weight_decay"])},
-            )
-
-
-
-        normal_noise=NormalActionNoise(np.zeros(3),np.ones(3)*float(config["algo"]["action_noise_sigma"]))
-        vec_noise=VectorizedActionNoise(normal_noise,N_ENVS)
-        if not config["resume"]:
-            model = SAC("MultiInputPolicy", 
-                    vec_env,
-                    verbose=1,
-                    learning_rate=float(config["algo"]["learning_rate"]),
-                    ent_coef="auto_0.1",
-                    #action_noise=vec_noise,
-                    policy_kwargs=policy_kwargs,
-                    device="cuda",
-                    batch_size=config["algo"]["batch_size"],
-                    buffer_size=config["algo"]["buffer_size"],
-                    seed=seed)
-        else:
-            model=SAC.load(config["resume"],device="cuda",env=vec_env)
-
-        total_timesteps=int(float(config["total_timesteps"]))
-    
     else:
-        raise Exception("Unknown algo")
+        print(colored(f"loading model from {config['resume']}...", "yellow", attrs=["bold"]))
 
+        custom_objects=dict(
+                ent_coef=float(config["algo"]["ent_coef"]),
+                device=device,
+                clip_range=float(config["algo"]["clip_range"]),
+                vf_coef=float(config["algo"]["vf_coef"]),
+                learning_rate=float(config["algo"]["learning_rate"]) if config["algo"]["learning_rate"]!=-1 else lr_schedule,
+                n_steps=int(config["algo"]["n_steps"]),
+                seed=seed)
+
+        for k,v in custom_objects.items():
+            print(k,v)
+
+        model=PPO.load(config["resume"],device=device,env=vec_env,custom_objects=custom_objects)
+
+    
+    total_timesteps=int(float(config["total_timesteps"]))
+       
     if os.path.exists(config['out']):
         if confirm(colored(f"The output directory ({config['out']}) specified in your yaml file already exists. Overwrite?","red",attrs=["bold"])):
             shutil.rmtree(config["out"])  
@@ -166,15 +108,10 @@ def main(config,seed):
     
     os.mkdir(config['out'])
 
-
-
-
     with open(f"{config['out']}/config.yaml","w") as fl:
         yaml.dump(config,fl)
     with open(f"{config['out']}/info.txt","w") as fl:
-        #for retrocompatibility
         json.dump({"algo": config["algo"]["name"], "num_envs": config["num_envs"] , "out": config["out"], "resume": config["resume"], "seed": config["seed"]},fl)
-
 
     logger_path= f"{config['out']}/"
     logger= configure(logger_path, ["stdout", "csv"])
@@ -199,21 +136,19 @@ def main(config,seed):
             )
         ])
 
-    if config["algo"]["name"]=="ppo":
-        print(model.policy)
-        num_params_total=sum([param.numel() for param in model.policy.parameters()])
-        num_params_learnable=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
-        print(colored(f"num_total_params={num_params_total}","cyan",attrs=["bold"]))
-        print(colored(f"num_learnable_params={num_params_learnable}","cyan",attrs=["bold"]))
-        print(model.policy.optimizer)
-        print(colored(f"total_timesteps={total_timesteps}","yellow"))
-        num_updates_per_rollout=(config["algo"]["n_epochs"]*config["num_envs"]*config["algo"]["n_steps"])/config["algo"]["batch_sz"]
-        if not confirm(colored(f"the current config results in {num_updates_per_rollout} number of updates per rollout. Continue? ","green",attrs=["bold"])):
-            print("Aborting.")
-            os._exit(1)
-        else:
-            print("Okay.")
-    #pdb.set_trace()    
+    print(model.policy)
+    num_params_total=sum([param.numel() for param in model.policy.parameters()])
+    num_params_learnable=sum([param.numel() for param in model.policy.parameters() if param.requires_grad])
+    print(colored(f"num_total_params={num_params_total}","cyan",attrs=["bold"]))
+    print(colored(f"num_learnable_params={num_params_learnable}","cyan",attrs=["bold"]))
+    print(model.policy.optimizer)
+    print(colored(f"total_timesteps={total_timesteps}","yellow"))
+    num_updates_per_rollout=(config["algo"]["n_epochs"]*config["num_envs"]*config["algo"]["n_steps"])/config["algo"]["batch_sz"]
+    if not confirm(colored(f"the current config results in {num_updates_per_rollout} number of updates per rollout. Continue? ","green",attrs=["bold"])):
+        print("Aborting.")
+        os._exit(1)
+    else:
+        print("Okay.")
 
     model.terrain_type=config["problem"]["terrain_type"]
     model.learn(total_timesteps=total_timesteps,callback=callback)

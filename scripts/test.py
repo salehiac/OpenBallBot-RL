@@ -28,8 +28,6 @@ def main(args,seed=None):
             raise Exception("unknown algo")
         
         env=make_ballbot_env(gui=True,
-                test_only=True,
-                goal_type=args.goal_type,
                 terrain_type=model.terrain_type if not args.override_terrain_type else args.override_terrain_type,
                 log_options={"cams":False, "reward_terms":True},
                 seed=seed)()
@@ -80,7 +78,6 @@ if __name__=="__main__":
 
     _parser = argparse.ArgumentParser(description="Test a policy.")
     _parser.add_argument("--algo", type=str,help="choices are ppo, ...")
-    _parser.add_argument("--goal_type", type=str, help="either rand_dir, rand_pos, fixed_pos, fixed_dir or stop",required=True)
     _parser.add_argument("--path", type=str,help="path to policy")
     _parser.add_argument("--n_test", type=int,help="How many times to test policy",default=1)
     _parser.add_argument("--seed", type=int,help="For repeatablility. If not set, will be chosen randomly",default=-1)

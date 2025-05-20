@@ -4,19 +4,16 @@ algo:
   clip_range: 0.015
   target_kl: 0.3
   vf_coef: 2.0
-  #learning_rate: 1e-4
-  #learning_rate: 5e-5
-  learning_rate: -1 #this turns on scheduler
+  learning_rate: -1 #this turns on the scheduler
   n_steps: 2048 #n_steps means n_steps per env before update
   weight_decay: 0.01 #not part of standard PPO
   n_epochs: 5
   batch_sz: 256
   normalize_advantage: false
 problem:
-  terrain_type: "perlin" #options are "bands", "perlin", "flat"
+  terrain_type: "perlin" #optionas are "perlin" and "flat"
 total_timesteps: 10e6
 frozen_cnn: "../encoder_frozen/encoder_epoch_53" #this model has been trained with snoise
-goal_type: fixed_dir
 hidden_sz: 128
 num_envs: 10
 resume: ""

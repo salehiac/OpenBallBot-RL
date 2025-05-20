@@ -202,7 +202,6 @@ def main(args):
         dataset = DepthImageDataset(image_data)
 
     print(colored(f"dataset contains {len(dataset)} depth images"))
-    #pdb.set_trace()
     
     val_ratio = 0.2
     val_size = int(len(dataset) * val_ratio)
@@ -212,15 +211,10 @@ def main(args):
     train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=64, shuffle=True, num_workers=4)#I'm also shuffling here for display reasons
 
-    #dataset.plot_im(np.random.randint(len(train_loader)))
-
     if args.save_dataset_as_pickle:
         with open(f"{args.save_dataset_as_pickle}/dataset.pkl","wb") as fl:
             pickle.dump(dataset,fl)
     
-    #print(len(dataset))
-    #pdb.set_trace()
-
     if not args.from_model:
         model=TinyAutoencoder(H=64,W=64)
     else:

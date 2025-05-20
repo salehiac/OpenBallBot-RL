@@ -115,6 +115,7 @@ The default yaml config file should result in something that looks like
   <img src="/images/b.png" width="49.0%" />
 </p>
 
+**Note**: The training process uses a pretrained depth-encoder, which is provided in `<root>/encoder_frozen/encoder_epoch_53`. If for some reason you prefer to train your own, you can use the `scripts/gather_data.py` and `sscripts/pretrain_encoder.py` scripts. 
 
 ## Evaluating an agent
 

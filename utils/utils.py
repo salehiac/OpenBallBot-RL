@@ -8,10 +8,8 @@ import gymnasium as gym
 import ballbotgym
 
 def make_ballbot_env(
-        goal_type,
         terrain_type,
         gui=False,
-        test_only=False,
         disable_cams=False,
         seed=0,
         log_options={"cams":False, "reward_terms":False},
@@ -27,8 +25,6 @@ def make_ballbot_env(
         env=gym.make(
                 "ballbot-v0.1",
                 GUI=gui,#should be disabled in parallel training
-                goal_type=goal_type,
-                test_only=test_only,
                 log_options=log_options,
                 terrain_type=terrain_type,
                 eval_env=[eval_env,seed])#because stablebaselines's EvalCallback, in contrast with training, doesn't seed at the first iteration
