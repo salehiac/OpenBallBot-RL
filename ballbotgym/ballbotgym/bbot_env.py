@@ -576,8 +576,8 @@ class BBotSimulation(gym.Env):
              
             with self.passive_viewer.lock():
 
-                if self.goal_type in ["rand_dir", "fixed_dir"]:
-                #if 0:
+                #if self.goal_type in ["rand_dir", "fixed_dir"]:
+                if 0:
                     self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
                     factor=20#just for display
                     hh=0.5
