@@ -69,6 +69,17 @@ pip install mujoco-x.y.z.tar.gz
 
 NOTE: If you're using conda, you'll need `conda install -c conda-forge libstdcxx` to avoid some gxx related issues.
 
+### Sanity Check
+
+To test that everything works well, run
+
+```
+cd scripts
+python3 test_pid.py
+```
+
+This uses a simple PID controller to balance the robot on flat terrain.
+
 ## Training an agent
 
 Edit the `./config/train_ppo_directional.yaml` file if necessary, and then
@@ -86,12 +97,16 @@ python3 ../utils/plotting_tools.py --csv log/progress.csv --config log/config.ya
 
 The default yaml config file should result in something that looks like 
 <p float="left">
-  <img src="/images/a.png" width="32.0%" />
-  <img src="/images/b.png" width="32.0%" />
+  <img src="/images/a.png" width="49.0%" />
+  <img src="/images/b.png" width="49.0%" />
 </p>
-
 
 
 ## Evaluating an agent
 
+You can see how the agent behaves using the `scripts/test.py` script.
 
+```
+python3 test.py --algo ppo --goal_type fixed_dir --n_test=3 --path <path_to_your_model>
+```
+An example model is provided in `<repo_root>trained_agents/`.
