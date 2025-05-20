@@ -1,0 +1,21 @@
+diff --git a/src/engine/engine_collision_primitive.c b/src/engine/engine_collision_primitive.c
+index db6a6c14..fab7d6db 100644
+--- a/src/engine/engine_collision_primitive.c
++++ b/src/engine/engine_collision_primitive.c
+@@ -306,7 +306,15 @@ int mjraw_SphereCapsule(mjContact* con, mjtNum margin,
+   // find nearest point on segment, do sphere-sphere test
+   mju_scl3(vec, axis, x);
+   mju_addTo3(vec, pos2);
+-  return mjraw_SphereSphere(con, margin, pos1, mat1, size1, vec, mat2, size2);
++
++  int ncon = mjraw_SphereSphere(con, margin, pos1, mat1, size1, vec, mat2, size2);
++
++  // align contact frame second axis with capsule
++  if (ncon) {
++    mju_copy3(con->frame+3, axis);
++  }
++
++  return ncon;
+ }
+ 
+ 

@@ -17,7 +17,7 @@ _linewidth=8
 _legent_fs=20
 
 
-def plot_train_val_progress(csv_file):
+def plot_train_val_progress(csv_file,eval_only):
 
     with open(csv_file, newline='') as csvfile:
         first_line = csvfile.readline()
@@ -60,8 +60,9 @@ def plot_train_val_progress(csv_file):
 
        
         #plot rewards
-        plt.plot(progress_data["rollout_domain"],progress_data["rollout/ep_rew_mean"],linewidth=_linewidth,label="train")
-        plt.plot(progress_data["eval_domain"],progress_data["eval/mean_reward"],linewidth=_linewidth,label="eval")
+        if not eval_only:
+            plt.plot(progress_data["rollout_domain"],progress_data["rollout/ep_rew_mean"],linewidth=_linewidth,label="train",color="blue")
+        plt.plot(progress_data["eval_domain"],progress_data["eval/mean_reward"],linewidth=_linewidth,label="eval",color="darkorange")
         #plt.xlabel('Environment timesteps (millions)', fontsize=_fontsize_labels)
         plt.xlabel('Environment timesteps', fontsize=_fontsize_labels)
         plt.ylabel(f'Mean reward \n(average over last N environments)', fontsize=_fontsize_labels)
@@ -75,8 +76,9 @@ def plot_train_val_progress(csv_file):
 
 
         #plot ep_len
-        plt.plot(progress_data["rollout_domain"],progress_data["rollout/mean_ep_length"],linewidth=_linewidth,label="train")
-        plt.plot(progress_data["eval_domain"],progress_data["eval/mean_ep_length"],linewidth=_linewidth,label="eval")
+        if not eval_only:
+            plt.plot(progress_data["rollout_domain"],progress_data["rollout/mean_ep_length"],linewidth=_linewidth,label="train",color="blue")
+        plt.plot(progress_data["eval_domain"],progress_data["eval/mean_ep_length"],linewidth=_linewidth,label="eval",color="darkorange")
         #plt.xlabel('Environment timesteps (millions)', fontsize=_fontsize_labels)
         plt.xlabel('Environment timesteps', fontsize=_fontsize_labels)
         plt.ylabel(f'Average episode length \n(over last N environments)', fontsize=_fontsize_labels)
@@ -154,10 +156,11 @@ if __name__=="__main__":
     _parser = argparse.ArgumentParser(description="Plotting from logs")
     _parser.add_argument('--csv', type=str,required=True,help="your csv file")
     _parser.add_argument('--config', type=str,required=True,help="your config.yaml")
+    _parser.add_argument("--plot_train", action="store_true", help="also plots training stats if passed to script")
 
     _args = _parser.parse_args()
 
 
-    plot_train_val_progress(_args.csv)
+    plot_train_val_progress(_args.csv,eval_only=not _args.plot_train)
     plot_loss_evolutions(_args.csv,_args.config)
 

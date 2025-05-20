@@ -6,7 +6,7 @@ This repo contains the mujoco-based ballbot simulation as well as the RL code to
 <add citation>
 ```
 
-Here are some navigation examples from a trained policy:
+Here are some navigation examples from a trained policy on *randomly sampled* uneven terrain:
 
 
 <p float="left">
@@ -70,6 +70,27 @@ pip install mujoco-x.y.z.tar.gz
 NOTE: If you're using conda, you'll need `conda install -c conda-forge libstdcxx` to avoid some gxx related issues.
 
 ## Training an agent
+
+Edit the `./config/train_ppo_directional.yaml` file if necessary, and then
+
+```
+cd scripts
+python3  train.py --config ../config/train_ppo_directional.yaml
+```
+
+To see the progress of your training, you can use
+
+```
+python3 ../utils/plotting_tools.py --csv log/progress.csv --config log/config.yaml
+```
+
+The default yaml config file should result in something that looks like 
+<p float="left">
+  <img src="/images/a.png" width="32.0%" />
+  <img src="/images/b.png" width="32.0%" />
+</p>
+
+
 
 ## Evaluating an agent
 
