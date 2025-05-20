@@ -61,7 +61,7 @@ def main(config,seed):
         N_ENVS = int(config["num_envs"])
 
         vec_env  = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed) for _ in range(N_ENVS)])
-        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed+1) for _ in range(N_ENVS)])
+        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed+N_ENVS+env_i,eval_env=True) for env_i in range(N_ENVS)])
 
 
 
@@ -119,7 +119,7 @@ def main(config,seed):
 
         N_ENVS = int(config["num_envs"])
         vec_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed) for _ in range(N_ENVS)])
-        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed+1) for _ in range(N_ENVS)])
+        eval_env = SubprocVecEnv([make_ballbot_env(goal_type=config["goal_type"],terrain_type=config["problem"]["terrain_type"],seed=seed+N_ENVS+env_i,eval_env=True) for env_i in range(N_ENVS)])
 
 
         policy_kwargs = dict(

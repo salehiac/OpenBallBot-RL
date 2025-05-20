@@ -110,7 +110,8 @@ class BBotSimulation(gym.Env):
             depth_only=True,
             log_options={"cams":False,"reward_terms":False},
             max_ep_steps=None,
-            terrain_type:str="perlin"):
+            terrain_type:str="perlin",
+            eval_env=[False,None]):
         """
         goal_type can be 'fixed_pos', 'fixed_dir', 'rand_pos', 'rand_dir', 'stop'
         test_only just gathers some additional debug data - TODO: remove it, I guess?
@@ -218,7 +219,10 @@ class BBotSimulation(gym.Env):
         self.reward_term_3_hist=[]#constant for now
 
         self.num_episodes=-1
-        self.np_seed=None
+        self.eval_env=eval_env[0]
+
+        if self.eval_env:
+            self._np_random, _ = gym.utils.seeding.np_random(eval_env[1])
 
     def effective_camera_frame_rate(self):
 
@@ -278,16 +282,15 @@ class BBotSimulation(gym.Env):
         hfield_height_coef=self.model.hfield_size[0,2]
 
         if self.terrain_type=="perlin":
-            r_seed=self._np_random.integers(0,10000) if self._np_random is not None else np.random.randint(10000)
-            if self._np_random is None:
-                print("r_seed=",r_seed)
+            r_seed=self._np_random.integers(0,10000)
+            #print("r_seed==",r_seed)
 
             self.last_r_seed=r_seed
             self.model.hfield_data=terrain.generate_perlin_terrain(nrows,seed=r_seed)
         elif self.terrain_type=="bands":
             num_bands=10
             max_angle=20
-            alphas=(self._np_random.random(num_bands)-0.5)*2*max_angle if self._np_random is not None else (np.random.rand(num_bands)-0.5)*2*max_angle
+            alphas=(self._np_random.random(num_bands)-0.5)*2*max_angle 
             print("alphas==",alphas)
             #alphas=[15,-15,25]
             terr=terrain.generate_banded(nrows,alphas=alphas,d=1,start_from=0)
@@ -333,10 +336,10 @@ class BBotSimulation(gym.Env):
 
        
     def reset(self,seed=None,goal:str="random",**kwargs):
+        
+        #print(f"resetting_env, seed={seed}, eval_env={self.eval_env}")
 
-        super().reset(seed=seed)#you should use self._np_random for any sort of sampling here, do **not** use np.random.rand() etc which uses the global rng state
-
-        #print(f"resetting_env, seed={seed}")
+        super().reset(seed=seed)
 
         self._reset_goal_and_reward_objs()
 
@@ -373,7 +376,7 @@ class BBotSimulation(gym.Env):
             print(colored(f"effective_frame_rate=={self.effective_camera_frame_rate()}","cyan",attrs=["bold"]))
 
 
-        if self.log_dir is None and self._np_random:#if self._np_random is None, then we're being called from an EvalCallback and we don't want to log 
+        if self.log_dir is None and not self.eval_env:
             rand_str=''.join(self._np_random.permutation(list(string.ascii_letters + string.digits))[:12])
             self.log_dir="/tmp/log_"+rand_str
             if os.path.exists(self.log_dir):
@@ -387,7 +390,7 @@ class BBotSimulation(gym.Env):
 
     def _save_logs(self):
 
-        if self._np_random is None:
+        if self.eval_env:
             return
 
 
@@ -573,8 +576,8 @@ class BBotSimulation(gym.Env):
              
             with self.passive_viewer.lock():
 
-                #if self.goal_type in ["rand_dir", "fixed_dir"]:
-                if 0:
+                if self.goal_type in ["rand_dir", "fixed_dir"]:
+                #if 0:
                     self.passive_viewer.user_scn.ngeom=1#yeah, =1, not +=1
                     factor=20#just for display
                     hh=0.5

@@ -9,6 +9,7 @@ import json
 from collections import namedtuple
 import argparse
 import yaml
+from termcolor import colored
 
 _fontsize_labels=25
 _fontsize_ticks=20
@@ -22,6 +23,12 @@ def plot_train_val_progress(csv_file):
         first_line = csvfile.readline()
         headers = first_line.lstrip('#').strip().split(',')
         reader = csv.DictReader(csvfile, fieldnames=headers)
+
+        line_count = sum(1 for _ in csv.DictReader(csvfile, fieldnames=headers))
+        if line_count<3:
+            msg=colored("not enough lines in the csv file yet", "red",attrs=["bold"])
+            raise Exception(msg)
+        csvfile.seek(0)
  
         data = defaultdict(list)
 
