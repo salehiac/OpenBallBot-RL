@@ -10,9 +10,10 @@ Here are some navigation examples from a trained policy on *randomly sampled* un
 
 
 <p float="left">
-  <img src="/images/episode_1.gif" width="32.0%" />
-  <img src="/images/episode_2.gif" width="32.0%" />
-  <img src="/images/episode_3.gif" width="32.0%" />
+  <img src="/images/episode_1.gif" width="40.0%" />
+  <img src="/images/episode_2.gif" width="40.0%" />
+  <img src="/images/episode_3.gif" width="40.0%" />
+  <img src="/images/episode_4.gif" width="29.0%" />
 </p>
 
 
