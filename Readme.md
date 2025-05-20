@@ -2,9 +2,9 @@
 
 
 <p float="left">
-  <img src="/images/episode_1.gif" width="25%" />
-  <img src="/images/episode_2.gif" width="25%" />
-  <img src="/images/episode_3.gif" width="25%" />
+  <img src="/images/episode_1.gif" width="33.3%" />
+  <img src="/images/episode_2.gif" width="33.3%" />
+  <img src="/images/episode_3.gif" width="33.3%" />
 </p>
 
 This repo contains the mujoco-based ballbot simulation as well as the RL code to reproduce the navigation results from the paper
