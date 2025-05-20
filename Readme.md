@@ -69,6 +69,20 @@ pip install mujoco-x.y.z.tar.gz
 
 NOTE: If you're using conda, you'll need `conda install -c conda-forge libstdcxx` to avoid some gxx related issues.
 
+### Other requirements
+
+Make sure that you have a recent version of `pytorch` as well as a recent version of `stablebaselines3` installed. This code has been tested with torch version `'2.7.0+cu126'`.
+
+Other requirements can be found in `requirements.txt`.
+
+
+### Install the Ballbot Environment
+
+```
+cd scripts/ballbotgym/
+pip install -e .
+```
+
 ### Sanity Check
 
 To test that everything works well, run

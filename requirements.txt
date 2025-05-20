@@ -1,0 +1,15 @@
+gymnasium==1.1.1
+matplotlib==3.10.3
+mujoco==MAKE SURE YOU HAVE PATCHED IT AND BUILT FROM SOURCE!
+noise==1.2.2
+numpy==2.2.6
+numpy_quaternion==2023.0.4
+opencv_python==4.11.0.86
+opencv_python_headless==4.10.0.84
+Pillow==11.2.1
+PyYAML==6.0.2
+scipy==1.15.3
+stable_baselines3==2.6.0
+termcolor==3.1.0
+torch==2.7.0
+trimesh==4.4.1
