@@ -16,7 +16,7 @@ Here are some navigation examples from a trained policy on four different, *rand
   <img src="/images/episode_4.gif" width="29.0%" />
 </p>
 
-Note that in the above, eval episodes `1, 2, 3` are `4000` timesteps long, while episode `4` is `10000` steps long. The policy has been trained with a maximum of `4000` steps, therefore, this last evaluation can bee seen as a demonstration of generalization capability.
+Note that in the above, eval episodes `1, 2, 3` are `4000` timesteps long, while episode `4` is `10000` steps long. The policy has been trained with a maximum of `4000` steps, therefore, this last evaluation can bee seen as a demonstration of generalization capability. 
 
 ## Warning!
 
@@ -31,9 +31,9 @@ Make sure you have CMake and a C++17 compiler installed.
 
 ### Building Mujoco from source (python bidings will be built separately)
 
-    1. Clone the mujoco repository: `git clone https://github.com/deepmind/mujoco.git`
+    1. Clone the mujoco repository: `git clone https://github.com/deepmind/mujoco.git` and cd into it.
     2. This step is optional but **recommended** due to the patching issue mentioned above: `git checkout 99490163df46f65a0cabcf8efef61b3164faa620`
-    3. Applyt the patch: `patch -p1 < mujoco_fix.patch`
+    3. Copy the patch `mujoco_fix.patch` provided in our repository to `<your_mujoco_repo>`, then `cd` into the latter and apply the patch: `patch -p1 < mujoco_fix.patch`
 
 The rest of the instructions are identitcal to the [official mujoco guide](https://mujoco.readthedocs.io/en/latest/programming/#building-mujoco-from-source) for building from source:
     
@@ -45,7 +45,7 @@ The rest of the instructions are identitcal to the [official mujoco guide](https
 
 ### Building the python bindings 
 
-Once you have built the patched Mujoco version from above, the steps for building the python buildings are almost identical to those from the [official Mujoco documentation](https://mujoco.readthedocs.io/en/stable/python.html#python-bindings):
+Once you have built the patched Mujoco version from above, the steps for building the python buindings are almost identical to those from the [official Mujoco documentation](https://mujoco.readthedocs.io/en/stable/python.html#python-bindings):
 
 1. Change to this directory:
 
@@ -66,14 +66,14 @@ This will generate many files in `<repo_clone_path>/mujoco/python/`, among which
 cd dist
 export MUJOCO_PATH=/PATH/TO/MUJOCO \
 export MUJOCO_PLUGIN_PATH=/PATH/TO/MUJOCO_PLUGIN \
-pip install mujoco-x.y.z.tar.gz
+pip install mujoco-x.y.z.tar.gz #replace x.y.z with the appropriate integers
 ```
 
-NOTE: If you're using conda, you'll need `conda install -c conda-forge libstdcxx` to avoid some gxx related issues.
+NOTE: If you're using conda, you might need `conda install -c conda-forge libstdcxx` to avoid some gxx related issues.
 
 ### Other requirements
 
-Make sure that you have a recent version of `pytorch` as well as a recent version of `stablebaselines3` installed. This code has been tested with torch version `'2.7.0+cu126'`.
+Make sure that you have a recent version of `pytorch` as well as a recent version of `stable_baselines3` installed. This code has been tested with torch version `'2.7.0+cu126'`.
 
 Other requirements can be found in `requirements.txt`.
 
@@ -81,7 +81,7 @@ Other requirements can be found in `requirements.txt`.
 ### Install the Ballbot Environment
 
 ```
-cd scripts/ballbotgym/
+cd OpenBallbot-RL/ballbotgym/
 pip install -e .
 ```
 
@@ -90,7 +90,7 @@ pip install -e .
 To test that everything works well, run
 
 ```
-cd scripts
+cd OpenBallbot-RL/scripts
 python3 test_pid.py
 ```
 
@@ -98,7 +98,7 @@ This uses a simple PID controller to balance the robot on flat terrain.
 
 ## Training an agent
 
-Edit the `./config/train_ppo_directional.yaml` file if necessary, and then
+Edit the `OpenBallbot-RL/config/train_ppo_directional.yaml` file if necessary, and then
 
 ```
 cd scripts
@@ -108,7 +108,7 @@ python3  train.py --config ../config/train_ppo_directional.yaml
 To see the progress of your training, you can use
 
 ```
-python3 ../utils/plotting_tools.py --csv log/progress.csv --config log/config.yaml
+python3 ../utils/plotting_tools.py --csv log/progress.csv --config log/config.yaml --plot_train
 ```
 
 The default yaml config file should result in something that looks like 
@@ -121,9 +121,12 @@ The default yaml config file should result in something that looks like
 
 ## Evaluating an agent
 
-You can see how the agent behaves using the `scripts/test.py` script.
+You can see how the agent behaves using the `OpenBallbot-RL/scripts/test.py` script.
 
 ```
-python3 test.py --algo ppo --goal_type fixed_dir --n_test=3 --path <path_to_your_model>
+python3 test.py --algo ppo --n_test=<numer_of_tests_to_perform> --path <path_to_your_model>
 ```
-An example model is provided in `<repo_root>trained_agents/`.
+
+## Trained policies
+
+A trained policy is provided in the `OpenBallbot-RL/trained_agents/` directory, and can be tested using the line above.

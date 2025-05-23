@@ -11,6 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import quaternion
 import os
 import cv2
+from contextlib import contextmanager
 import string
 import re
 from functools import reduce
@@ -441,7 +442,8 @@ class BBotSimulation(gym.Env):
         ctrl=np.clip(ctrl,a_min=-10,a_max=10)#in case of pid issues
 
         self.data.ctrl[:] = - ctrl
-        mujoco.mj_step(self.model, self.data)
+        with warnings_stdout_off():#to remove some benign (and very rare) warnings regarding objective convexity
+            mujoco.mj_step(self.model, self.data)
         
         self.data.xfrc_applied[self.model.body("base").id, :3] = np.zeros(3)#this is to reset the initial force that is applied. From the documentation,
                                                                             #the force will be applied unless it is reset
@@ -522,6 +524,7 @@ class BBotSimulation(gym.Env):
         return obs, reward, terminated, truncated, info
 
 
+   
     def close(self):
 
         if not self.disable_cameras:
@@ -537,19 +540,20 @@ class BBotSimulation(gym.Env):
         del self.model
         del self.data
 
+@contextmanager
+def warnings_stdout_off():
+   devnull = os.open(os.devnull, os.O_RDWR)
+   old_stderr = os.dup(sys.stderr.fileno())
+   os.dup2(devnull, sys.stderr.fileno())
+   try:
+       yield
+   finally:
+       os.dup2(old_stderr, sys.stderr.fileno())
+       os.close(devnull)
+       os.close(old_stderr)
+
 def sample_direction_uniform(num=1):
 
     t=np.random.rand(num).reshape(num,1)*2*np.pi
     return np.concatenate([np.cos(t),np.sin(t)],1)
-
-def main(args):
-
-    sim=BBotSimulation(xml_path=args.xml_path,
-            GUI=args.gui,
-            max_ep_steps=args.max_steps)
-
-    obs, _=sim.reset()
-    for step_i in range(sim.max_ep_steps):
-
-        obs, reward, terminated, _, info=sim.step(sim.action_space.sample())
 

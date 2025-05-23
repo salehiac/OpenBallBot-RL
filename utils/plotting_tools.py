@@ -162,5 +162,4 @@ if __name__=="__main__":
 
 
     plot_train_val_progress(_args.csv,eval_only=not _args.plot_train)
-    plot_loss_evolutions(_args.csv,_args.config)
 

@@ -1,9 +1,8 @@
-gymnasium==1.1.1
-matplotlib==3.10.3
-mujoco==MAKE SURE YOU HAVE PATCHED IT AND BUILT FROM SOURCE!
-noise==1.2.2
-numpy==2.2.6
-numpy_quaternion==2023.0.4
+gymnasium
+matplotlib
+noise
+numpy
+numpy_quaternion
 opencv_python==4.11.0.86
 opencv_python_headless==4.10.0.84
 Pillow==11.2.1
