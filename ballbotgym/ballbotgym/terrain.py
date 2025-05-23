@@ -32,9 +32,7 @@ def generate_perlin_terrain(n,
                                     repeatx=1024,
                                     repeaty=1024,
                                     base=seed)
-    # Normalize to [0, 1]
     terrain = (terrain - terrain.min()) / (terrain.max() - terrain.min()+1e-8)
-
 
     assert (terrain>=0).all()
     #plt.imshow(terrain)

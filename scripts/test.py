@@ -30,7 +30,7 @@ def main(args,seed=None):
                 terrain_type=model.terrain_type if not args.override_terrain_type else args.override_terrain_type,
                 log_options={"cams":False, "reward_terms":True},
                 seed=seed)()
-        print(f"bbot mass is {sum(env.env.env.env.model.body_mass)}")
+        
         if args.override_terrain_type:
             print(colored(f"policy was trained on terrain type {model.terrain_type}, but it will be tested on terrain type {args.override_terrain_type}","yellow",attrs=["bold"]))
         else:
@@ -48,14 +48,11 @@ def main(args,seed=None):
             gamma=0.99999
             count=0
             while not done:
-                action, _ = model.predict(obs, deterministic=True)  # Use deterministic policy for testing
-                #print(action)
+                action, _ = model.predict(obs, deterministic=True)
                 obs, reward, done, truncated, info = env.step(action)
 
                 G_tau+=gamma**count*reward
                 count+=1
-                #print(f'step={count}')
-
 
             print("G_tau==",G_tau) 
 

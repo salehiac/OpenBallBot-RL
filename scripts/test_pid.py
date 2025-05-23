@@ -30,7 +30,6 @@ if __name__=="__main__":
             max_ep_steps=25000,
             terrain_type="flat")
     
-    #k_vals=[20,5,2] #works for 1khz
     k_vals=[20,15,2] #better for 500hz, but not optimal
     pid=policies.PID(dt=env.env.env.opt_timestep,
             k_p=k_vals[0],
@@ -51,11 +50,6 @@ if __name__=="__main__":
         obs, reward, terminated, _, info=env.step(ctrl.numpy())
         G_tau+=gamma**step_i*reward
     
-        #print(step_i,obs["orientation"])
-        #if step_i>10:
-        #    print(env.env.env.opt_timestep)
-        #    break
-    
         if terminated and not info["failure"]:#don't check for success here since success is defined w.r.t goal flag
             print(colored(f"successfuly balanced robot for {step_i} steps","green",attrs=["bold"]))
         elif terminated and info["failure"]:
@@ -65,8 +59,6 @@ if __name__=="__main__":
     print("G_tau==",G_tau)
     env.env.env.close()
     import threading
-
-    #print(threading.enumerate())
     os._exit(0)#not cool, but the passive viewer sometimes doesn't close properly
         
                

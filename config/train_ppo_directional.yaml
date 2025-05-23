@@ -11,7 +11,7 @@ algo:
   batch_sz: 256
   normalize_advantage: false
 problem:
-  terrain_type: "perlin" #optionas are "perlin" and "flat"
+  terrain_type: "perlin" #options are "perlin" and "flat"
 total_timesteps: 10e6
 frozen_cnn: "../encoder_frozen/encoder_epoch_53" #this model has been trained with snoise
 hidden_sz: 128

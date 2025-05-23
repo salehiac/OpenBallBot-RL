@@ -71,7 +71,6 @@ class Extractor(BaseFeaturesExtractor):
 
         self.extractors = torch.nn.ModuleDict(extractors)
 
-        # Update the features dim manually
         self._features_dim = total_concat_size
 
     def forward(self, observations) -> torch.Tensor:
@@ -90,7 +89,7 @@ class Extractor(BaseFeaturesExtractor):
 
 class PID(Policy):
     """
-    doesn't support batch simulations
+    Only used for sanity checks after install
     """
 
     def __init__(self,dt,k_p,k_i,k_d):
@@ -126,13 +125,8 @@ class PID(Policy):
             up_axis_local=torch.tensor([0,0,1]).float()
 
             #all in local coordinates
-            #error_vec=up_axis_local-(-gravity_local) #for the body to move in a direction, the ball should go in the opposite one
-            #error_vec_2d=error_vec[:-1]
             error_vec_2d=torch.zeros(2)
             
-            #pitch=torch.arcsin(-R_mat[2,0])
-            #roll=torch.atan2(R_mat[2,1],R_mat[2,2])
-
             roll=torch.atan2(R_mat[2,1],R_mat[2,2]);
             pitch=torch.atan2(-R_mat[2,0],torch.sqrt(R_mat[2,1]**2+R_mat[2,2]**2));
 
@@ -143,21 +137,15 @@ class PID(Policy):
             self.integral+=error_vec_2d*self.dt
             derivative=(error_vec_2d-self.prev_err)/self.dt
        
-            #Now that we're computing pitch and roll error, this error is not in global coordinates but in roll/pitch space!
             u=self.k_p*error_vec_2d + self.k_i * self.integral + self.k_d * derivative
-
 
             self.prev_err=error_vec_2d
 
             angle_in_degrees=torch.acos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
 
-
-            #self.err_hist.append(angle_in_degrees)
             self.err_hist.append(error_vec_2d.reshape(1,2).numpy())
 
             up_axis_global=R_mat.mm(up_axis_local.reshape(3,1))
-
-            #print(f"roll={roll}, pitch=={pitch}, up_axis_global={R_mat.mm(up_axis_local.reshape(3,1)).reshape(3)}, command (pitch/roll coords)=={u}")
 
             if self.return_in_pitch_roll_space:
                 return u, angle_in_degrees

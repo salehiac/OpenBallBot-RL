@@ -25,7 +25,6 @@ def main(args):
     print(colored(f"num_envs={num_envs}\nData will be written to {vec_env.get_attr('log_dir')}","yellow",attrs=["bold"]))
     model = PPO.load(args.policy)
 
-    #pdb.set_trace()
     for s_i in range(args.n_steps):
            
         action = model.predict(obs, deterministic=True)  

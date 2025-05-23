@@ -348,8 +348,6 @@ class BBotSimulation(gym.Env):
         if not self.disable_cameras:
 
             delta_time=self.data.time-self.prev_im_pair.ts
-            #delta_mujoco=self.data.time-self.prev_time #confirmed that mujoco is running at 500hz with current xml config 
-            #self.prev_time=self.data.time
           
             #the following condition generally results in less frames than a condition like "if self.prev_im_pair.im_0 is None or len(self.rgbd_hist_1)<self.camera_frame_rate*self.data.time:",
             #but it guarantees regular timestamps. For example, while the aforementioned condition will guarantee that we get 90 frames in 1sec for a camera framerate of 90, we would only get

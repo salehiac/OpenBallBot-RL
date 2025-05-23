@@ -22,14 +22,7 @@
 
   <worldbody>
 
-    <!--world axis display -->
-    <!--<geom name="x_axis" type="capsule" fromto="0 0 0.5 0.2 0 0.5" size="0.005" rgba="1 0 0 1" contype="0" conaffinity="0"/>-->
-    <!--<geom name="y_axis" type="capsule" fromto="0 0 0.5 0 0.2 0.5" size="0.005" rgba="0 1 0 1" contype="0" conaffinity="0"/>-->
-    <!--<geom name="z_axis" type="capsule" fromto="0 0 0.5 0 0 0.7" size="0.005" rgba="0 0 1 1" contype="0" conaffinity="0"/>-->
-
     <light name="top" pos="0 0 10.0"/>
-
-    <!--<geom name="ground" type="plane" size="25 25 0.1" pos="0 0 0" rgba="0.39 0.26 0.12 1"  friction="3.0"/>-->
 
     <geom name="terrain" type="hfield" hfield="terrain" size="5 5 0.1" pos="0 0 0" />
     
@@ -37,12 +30,6 @@
     <body name="base" pos="0 0 0.24" euler="0 0 0">
     
       <freejoint name="base_free_joint"/>
-      <!-- density is in kg/m^3. I'll trust mujoco's volume computation, and since the tower is around 1.7kg (with electronics, wheels and cover), I'm fixing the density such that the value  -->
-      <!-- that is returned by model.body("base").mass is ~1.55. Wheel mass will be added independently. Not specifying intertia matrix since Mujoco's estimate is probably better than mine -->
-      <!-- if you want to use the convex hull for collision, uncomment the following line and comment the two ones that follow it -->
-      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="83.6"/> -->
-      <!-- to not use the convex hull but instead use the mesh for visual+inertial properties and rely on a cylinder for collisions, comment the line above and uncomment the two below  -->
-      <!--<geom name="tower_mesh" type="mesh" mesh="base_mesh" rgba="0.0 0.5 0.0 0.5" density="23.6" contype="0" conaffinity="0"/>  <!--<!--no collision because the convex hull is too large-->-->
       <geom name="tower_collision" type="cylinder"  size="0.11 0.14" pos="0 0 0.2" density="23.6" rgba="0.18 0.8 0.44 1.0"  /> 
       <geom name="ballast" type="box" size="0.1 0.1  0.1" rgba="0.5 0.5 0.0 0.5" density="400" pos="0 0 0.002" contype="0" conaffinity="0" group="3"/>   to lower center of mass
 
@@ -60,20 +47,17 @@
 
       <body name="wheel_0" pos="0 0 -0.001" euler="0 0 0">
          <geom name="wheel_mesh_0" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="1 0 0 1" material="grid"/>
-        <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_0" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
 
       <body name="wheel_1" pos="0 0 -0.001" euler="0 0 120">
         <geom name="wheel_mesh_1" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 1 0 1" material="grid"/>
-        <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_1" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
 
 
       <body name="wheel_2" pos="0 0 -0.001" euler="0 0 240">
         <geom name="wheel_mesh_2" type="capsule"  size="0.025 0.02" euler="-45 9 0" pos="-0.018 -0.08 -0.053" density="620.0" rgba="0 0 1 1" material="grid"/>
-        <!--axis orientation from feedcad's python api, pos offset set manually-->
         <joint name="wheel_joint_2" type="hinge" axis="-0.15316554764123935 -0.6903189805903613 -0.7071067953657663" pos="0 0 0.0293" armature="0.005" damping="0.8"/>
       </body>
 
@@ -83,7 +67,6 @@
 
     <body name="ball" pos="0 0.0 0.26">
       <freejoint name="ball_free_joint" />
-      <!--the basketball should be around 0.6kg-->
       <geom name="the_ball" type="sphere" size="0.09" pos="0 0 -0.14" rgba="1 1 1 1.0" density="55" material="basketball_mat" />
     </body>
   </worldbody>
@@ -96,7 +79,6 @@
   </actuator>
 
   <contact>
-    <!--definitely the correct friction order-->
     <pair name="non-isotropic0" geom1="the_ball" geom2="wheel_mesh_0" condim="3" friction="0.001 1.0"/>
     <pair name="non-isotropic1" geom1="the_ball" geom2="wheel_mesh_1" condim="3" friction="0.001 1.0"/>
     <pair name="non-isotropic2" geom1="the_ball" geom2="wheel_mesh_2" condim="3" friction="0.001 1.0"/>
@@ -106,8 +88,6 @@
     <accelerometer name="imu_accel" site="imu_site"/>
     <gyro name="imu_gyro" site="imu_site"/>
   </sensor>
-
-
 
 </mujoco>
 
