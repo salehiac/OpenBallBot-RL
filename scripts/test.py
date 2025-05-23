@@ -6,7 +6,6 @@ import torch
 import argparse
 import random
 import torch
-import matplotlib.pyplot as plt
 
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -41,7 +40,6 @@ def main(args,seed=None):
         p_sum=sum([param.abs().sum().item() for param in model.policy.parameters() if param.requires_grad])
         print(colored(f"sum_of_model_params=={p_sum}","yellow"))
 
-        trajectories=[[] for _ in range(args.n_test)]
         for test_i in range(args.n_test):
             obs, _ = env.reset(seed=seed+test_i)
             done = False
@@ -54,21 +52,12 @@ def main(args,seed=None):
                 #print(action)
                 obs, reward, done, truncated, info = env.step(action)
 
-                trajectories[test_i].append(info["pos2d"].reshape(1,2))
-
                 G_tau+=gamma**count*reward
                 count+=1
                 #print(f'step={count}')
 
 
             print("G_tau==",G_tau) 
-            trajectories[test_i]=np.concatenate(trajectories[test_i],0)
-
-        for test_i in range(args.n_test):
-            plt.plot(trajectories[test_i][:,0],trajectories[test_i][:,1])
-        plt.axis("equal")
-        plt.grid("on")
-        plt.show()
 
     env.close()
     

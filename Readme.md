@@ -6,7 +6,7 @@ This repo contains the mujoco-based ballbot simulation as well as the RL code to
 <add citation>
 ```
 
-Here are some navigation examples from a trained policy on *randomly sampled* uneven terrain:
+Here are some navigation examples from a trained policy on four different, *randomly sampled* uneven terrains:
 
 
 <p float="left">

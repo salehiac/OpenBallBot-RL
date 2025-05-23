@@ -18,4 +18,4 @@ hidden_sz: 128
 num_envs: 10
 resume: ""
 out: ./log
-seed: 0
+seed: 4133

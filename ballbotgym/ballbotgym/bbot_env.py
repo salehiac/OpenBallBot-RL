@@ -289,7 +289,7 @@ class BBotSimulation(gym.Env):
         self.G_tau=0.0
         self.num_episodes+=1
 
-        if self.num_episodes==0:
+        if self.num_episodes==0 and self.verbose:
             print(colored(f"effective_frame_rate=={self.effective_camera_frame_rate()}","cyan",attrs=["bold"]))
 
 
@@ -379,9 +379,7 @@ class BBotSimulation(gym.Env):
         #angular velocities of joints
         motor_state=np.array([self.data.qvel[self.model.joint(f"wheel_joint_{motor_idx}").id] for motor_idx in range(3)]).astype(_default_dtype)
         motor_state/=10#just to normalize
-        if any(np.abs(motor_state)>2):
-            print("WARNING!!!!!!!! =========================!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print(motor_state)
+        
         motor_state=np.clip(motor_state,a_min=-2.0,a_max=2.0)
         self.prev_motor_state=motor_state.copy()
 
@@ -435,14 +433,11 @@ class BBotSimulation(gym.Env):
         omniwheel_commands  np.tensor of shape(3,)
         """
 
-        #print("commands==",omniwheel_commands)
-
         if self.data.time==0.0 and self.step_counter>0.0:#reset done in GUI
             print("RESET DUE TO RESET FROM GUI")
             self.reset()
         
         ctrl=omniwheel_commands*10
-        #print("ctrl==",ctrl)
         ctrl=np.clip(ctrl,a_min=-10,a_max=10)#in case of pid issues
 
         self.data.ctrl[:] = - ctrl
@@ -494,7 +489,8 @@ class BBotSimulation(gym.Env):
         self.step_counter+=1
 
         if self.step_counter>=self.max_ep_steps:
-            print(f"terminated. Cause: {self.step_counter}>self.max_ep_steps")
+            if self.verbose:
+                print(f"terminated. Cause: {self.step_counter}>self.max_ep_steps")
             terminated=True
 
         #compute angle with upright vector
@@ -505,7 +501,6 @@ class BBotSimulation(gym.Env):
         angle_in_degrees=np.arccos(up_axis_local.dot(-gravity_local)).item()*180/np.pi
        
         max_allowed_tilt=20
-        early_fail_penalty=0.0
         if angle_in_degrees>max_allowed_tilt:
 
             if self.verbose:
@@ -521,7 +516,7 @@ class BBotSimulation(gym.Env):
         self.G_tau+=(gamma**self.step_counter)*reward
         if terminated:
             if self.verbose:
-                print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}, reward=={reward-early_fail_penalty}, early_fail_penalty=={early_fail_penalty}","magenta",attrs=["bold"]))
+                print(colored(f"G_tau=={self.G_tau}, num_steps=={self.step_counter}","magenta",attrs=["bold"]))
             self._save_logs()
 
         return obs, reward, terminated, truncated, info
