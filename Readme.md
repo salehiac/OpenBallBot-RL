@@ -1,6 +1,6 @@
-# Reinforcmenet Learning for Ballbot control in uneven terrain
+# Reinforcement Learning for Ballbot control in uneven terrain
 
-This repo contains the mujoco-based ballbot simulation as well as the RL code to reproduce the navigation results from the paper
+This repo contains the MuJoCo-based ballbot simulation as well as the RL code to reproduce the navigation results from the paper
 
 ```
 <add citation>
@@ -20,8 +20,8 @@ Note that in the above, eval episodes `1, 2, 3` are `4000` timesteps long, while
 
 ## Warning!
 
-Omniwheels are simulated using capsules with anisotropic friction. This requires a fix that is not (yet) part of the official Mujoco release. Therefore, you **must** apply the provided patch
-to your clone of mujoco and build both Mujoco and the python bindings from source.
+Omniwheels are simulated using capsules with anisotropic friction. This requires a fix that is not (yet) part of the official MuJoCo release. Therefore, you **must** apply the provided patch
+to your clone of MuJoCo and build both MuJoCo and the python bindings from source.
 
 For more information, see [This discussion](https://github.com/google-deepmind/mujoco/discussions/2517).
 
@@ -29,13 +29,13 @@ For more information, see [This discussion](https://github.com/google-deepmind/m
 
 Make sure you have CMake and a C++17 compiler installed.
 
-### Building Mujoco from source (python bidings will be built separately)
+### Building MuJoCo from source (python bindings will be built separately)
 
-    1. Clone the mujoco repository: `git clone https://github.com/deepmind/mujoco.git` and cd into it.
+    1. Clone the MuJoCo repository: `git clone https://github.com/deepmind/mujoco.git` and cd into it.
     2. This step is optional but **recommended** due to the patching issue mentioned above: `git checkout 99490163df46f65a0cabcf8efef61b3164faa620`
     3. Copy the patch `mujoco_fix.patch` provided in our repository to `<your_mujoco_repo>`, then `cd` into the latter and apply the patch: `patch -p1 < mujoco_fix.patch`
 
-The rest of the instructions are identitcal to the [official mujoco guide](https://mujoco.readthedocs.io/en/latest/programming/#building-mujoco-from-source) for building from source:
+The rest of the instructions are identical to the [official MuJoCo guide](https://mujoco.readthedocs.io/en/latest/programming/#building-mujoco-from-source) for building from source:
     
     4. Create a new build directory and cd into it.
     5. Run `cmake $PATH_TO_CLONED_REPO` to configure the build.
@@ -45,7 +45,7 @@ The rest of the instructions are identitcal to the [official mujoco guide](https
 
 ### Building the python bindings 
 
-Once you have built the patched Mujoco version from above, the steps for building the python buindings are almost identical to those from the [official Mujoco documentation](https://mujoco.readthedocs.io/en/stable/python.html#python-bindings):
+Once you have built the patched MuJoCo version from above, the steps for building the python bindings are almost identical to those from the [official MuJoCo documentation](https://mujoco.readthedocs.io/en/stable/python.html#python-bindings):
 
 1. Change to this directory:
 
