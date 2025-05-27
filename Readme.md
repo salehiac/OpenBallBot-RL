@@ -3,7 +3,7 @@
 This repo contains the MuJoCo-based ballbot simulation as well as the RL code to reproduce the navigation results from the paper
 
 ```
-<add citation>
+Salehi, Achkan. "Reinforcement Learning for Ballbot Navigation in Uneven Terrain." arXiv preprint arXiv:2505.18417 (2025).
 ```
 
 Here are some navigation examples from a trained policy on four different, *randomly sampled* uneven terrains:
