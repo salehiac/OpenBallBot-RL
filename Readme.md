@@ -126,3 +126,19 @@ python3 test.py --algo ppo --n_test=<numer_of_tests_to_perform> --path <path_to_
 ## Trained policies
 
 A trained policy is provided in the `OpenBallbot-RL/trained_agents/` directory, and can be tested using the line above.
+
+## Citation
+
+If you use this code or refer to our work, please cite:
+
+```
+@misc{salehi2025reinforcementlearningballbotnavigation,
+      title={Reinforcement Learning for Ballbot Navigation in Uneven Terrain},
+      author={Achkan Salehi},
+      year={2025},
+      eprint={2505.18417},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2505.18417},
+}
+```
